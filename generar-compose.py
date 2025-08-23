@@ -38,7 +38,7 @@ def generar_compose(file_name, clients_amount):
             "container_name": client_name,
             "image": "client:latest",
             "entrypoint": "/client",
-            "enviroment": ["CLI_ID=" + str(i + 1)],
+            "environment": ["CLI_ID=" + str(i + 1), "CLI_LOG_LEVEL=DEBUG"],
             "networks": ["testing_net"],
             "depends_on": ["server"],
         }
