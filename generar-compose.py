@@ -10,7 +10,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes: 
-      - ./server/config.yaml:/config.yaml,
+      - ./server/config.ini:/config.ini
     networks: 
       - testing_net
 {clients}
@@ -34,7 +34,7 @@ CLIENT_TEMPLATE = """\
     depends_on:
       - server
     volumes:
-      - ./client/config.yaml:/config.yaml,
+      - ./client/config.yaml:/config.yaml
 """
 
 def generate_compose(file_name, clients_amount):
