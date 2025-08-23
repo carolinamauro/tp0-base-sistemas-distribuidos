@@ -8,6 +8,4 @@ if [ -z "$file_name" ] || [ -z "$clients_amount" ]; then
     exit 1
 fi
 
-pip install -r requirements.txt
-
 python3 generar-compose.py "$file_name" "$clients_amount"
