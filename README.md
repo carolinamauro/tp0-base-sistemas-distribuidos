@@ -98,4 +98,4 @@ Se deberá poder ejecutar el siguiente comando para generar un archivo de Docker
 
 `./generar-compose.sh docker-compose-dev.yaml 5`
 
-El archivo `generar-compose.sh` chequea que se envien los dos parametros esperados y en caso contrario muestra un mensaje de ayuda. Utiliza un subscript de Python llamado `generar-compose.py` para generar el archivo de Docker Compose. El script `generar-compose.py` se encuentra en la raíz del proyecto y contiene la clase `DockerComposeYamlGenerator` que implementa la funcionalidad de generación del archivo con la cantidad de clientes solicitada y el nombre de archivo indicado.
+El archivo `generar-compose.sh` chequea que se envien los dos parametros esperados y en caso contrario muestra un mensaje de ayuda. Utiliza un subscript de Python llamado `generar-compose.py` para generar el archivo de Docker Compose. El script utiliza templetes para definir las secciones comunes del compose y luego itera para agregar la cantidad de clientes solicitada.
