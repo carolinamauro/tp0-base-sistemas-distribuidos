@@ -12,8 +12,9 @@ class DockerComposeYamlGenerator:
                     "container_name": "server",
                     "image": "server:latest",
                     "entrypoint": "python3 /main.py",
-                    "environment": ["PYTHONUNBUFFERED=1", "LOGGING_LEVEL=DEBUG"],
+                    "environment": ["PYTHONUNBUFFERED=1"],
                     "networks": ["testing_net"],
+                    "volumes": ["./server/config.yaml:/config.yaml"],
                 },  
             },
             "networks": {
@@ -36,9 +37,10 @@ class DockerComposeYamlGenerator:
                 "container_name": client_name,
                 "image": "client:latest",
                 "entrypoint": "/client",
-                "environment": ["CLI_ID=" + str(i + 1), "CLI_LOG_LEVEL=DEBUG"],
+                "environment": ["CLI_ID=" + str(i + 1)],
                 "networks": ["testing_net"],
                 "depends_on": ["server"],
+                "volumes": ["./client/config.yaml:/config.yaml"],
         }
             
     def generate_yaml(self):
