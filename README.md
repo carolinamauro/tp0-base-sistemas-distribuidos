@@ -75,22 +75,10 @@ client1 exited with code 0
 ## Parte 1: Introducción a Docker
 En esta primera parte del trabajo práctico se plantean una serie de ejercicios que sirven para introducir las herramientas básicas de Docker que se utilizarán a lo largo de la materia. El entendimiento de las mismas será crucial para el desarrollo de los próximos TPs.
 
-### Ejercicio N°2:
-Modificar el cliente y el servidor para lograr que realizar cambios en el archivo de configuración no requiera reconstruír las imágenes de Docker para que los mismos sean efectivos. La configuración a través del archivo correspondiente (`config.ini` y `config.yaml`, dependiendo de la aplicación) debe ser inyectada en el container y persistida por fuera de la imagen (hint: `docker volumes`).
+### Ejercicio N°3:
+Crear un script de bash `validar-echo-server.sh` que permita verificar el correcto funcionamiento del servidor utilizando el comando `netcat` para interactuar con el mismo. Dado que el servidor es un echo server, se debe enviar un mensaje al servidor y esperar recibir el mismo mensaje enviado.
 
-#### Solución:
-Se crearon volúmenes (bind mountS) para los archivos de configuración del cliente y del servidor, de modo que los mismos puedan ser editados en el host y reflejarse en los containers sin necesidad de reconstruir las imágenes.
+En caso de que la validación sea exitosa imprimir: `action: test_echo_server | result: success`, de lo contrario imprimir:`action: test_echo_server | result: fail`.
 
-Se modifico el archivo docker-compose.py agregando los siguientes volúmenes:
-Servver
-```yaml
-    volumes:
-      - ./server/config.yaml:/config.yaml
-```
-Client
-```yaml
-    volumes:
-      - ./client/config.yaml:/config.yaml
-```
+El script deberá ubicarse en la raíz del proyecto. Netcat no debe ser instalado en la máquina _host_ y no se pueden exponer puertos del servidor para realizar la comunicación (hint: `docker network`). `
 
-De esta forma, los archivos `config.yaml` y `config.ini` son montados (inyectados) en los containers en la ruta `/config.yaml` y `/config.ini` respectivamente, y los cambios realizados en los archivos en el host se reflejan inmediatamente en los containers.
