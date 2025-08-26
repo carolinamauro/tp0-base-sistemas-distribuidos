@@ -10,7 +10,6 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._active_client_connections = []
-        signal.signal(signal.SIGTERM, self.handle_sigterm_signal)
 
     def run(self):
         """
@@ -23,6 +22,7 @@ class Server:
 
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
+        signal.signal(signal.SIGTERM, self.handle_sigterm_signal)
         while True:
             client_sock = self.__accept_new_connection()
             self._active_client_connections.append(client_sock)
