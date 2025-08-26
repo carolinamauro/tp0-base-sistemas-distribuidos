@@ -62,7 +62,7 @@ class Server:
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
     
-    def __handle_sigterm_signal(self):
+    def __handle_sigterm_signal(self, signum, frame):
         logging.info('action: SIGTERM signal received | result: in_progress')
         for client_socket in self._active_client_connections:
             client_socket.close()
