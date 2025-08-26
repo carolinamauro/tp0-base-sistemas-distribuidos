@@ -51,11 +51,11 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) handleSigtermSignal() {
-	log.Infof("action: sigterm_received | result: in_progress | client_id: %v", c.config.ID)
+	log.Infof("action: SIGTERM signal received| result: in_progress | client_id: %v", c.config.ID)
 	if c.conn != nil {
 		c.conn.Close()
 	}
-	log.Infof("action: sigterm_received | result: success | client_id: %v", c.config.ID)
+	log.Infof("action: SIGTERM signal received| result: success | client_id: %v", c.config.ID)
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met

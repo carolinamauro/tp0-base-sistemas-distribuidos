@@ -22,7 +22,7 @@ class Server:
 
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
-        signal.signal(signal.SIGTERM, self.handle_sigterm_signal)
+        signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
         while True:
             client_sock = self.__accept_new_connection()
             self._active_client_connections.append(client_sock)
@@ -62,13 +62,12 @@ class Server:
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
     
-    def handle_sigterm_signal(self):
+    def __handle_sigterm_signal(self):
         logging.info('action: SIGTERM signal received | result: in_progress')
         for client_socket in self._active_client_connections:
             client_socket.close()
-            logging.info('action: client connection closed | result: success | socket: {client_socket}')
         self._server_socket.close()            
-        logging.info('action: server connection closed | result: success | socket: {self._server_socket}')
+        logging.info('action: SIGTERM signal received | result: success | socket: {self._server_socket}')
         sys.exit(0)
 
         
