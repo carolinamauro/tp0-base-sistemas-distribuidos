@@ -50,8 +50,24 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) handleSigtermSignal() {
+	log.Infof("action: sigterm_received | result: in_progress | client_id: %v", c.config.ID)
+	if c.conn != nil {
+		c.conn.Close()
+	}
+	log.Infof("action: sigterm_received | result: success | client_id: %v", c.config.ID)
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
+	signalChannel := make(chan os.Signal, 2)
+    signal.Notify(signalChannel, syscall.SIGTERM)
+    go func() {
+        sig := <-signalChannel
+        c.handleSigtermSignal()
+		os.Exit(0)
+    }()
+
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
