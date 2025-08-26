@@ -66,8 +66,9 @@ class Server:
         logging.info('action: SIGTERM signal received | result: in_progress')
         for client_socket in self._active_client_connections:
             client_socket.close()
+            logging.info('action: SIGTERM signal received | result: success | client socket: {client_socket}')
         self._server_socket.close()            
-        logging.info('action: SIGTERM signal received | result: success | socket: {self._server_socket}')
+        logging.info('action: SIGTERM signal received | result: success | server socket: {self._server_socket}')
         sys.exit(0)
 
         
