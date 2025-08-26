@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net"
 	"time"
-
+	"os"
+	"os/signal"
+	"syscall"
 	"github.com/op/go-logging"
 )
 
@@ -63,7 +65,7 @@ func (c *Client) StartClientLoop() {
 	signalChannel := make(chan os.Signal, 2)
     signal.Notify(signalChannel, syscall.SIGTERM)
     go func() {
-        sig := <-signalChannel
+        <-signalChannel
         c.handleSigtermSignal()
 		os.Exit(0)
     }()
