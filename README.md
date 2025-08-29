@@ -95,3 +95,26 @@ Se deberá implementar un módulo de comunicación entre el cliente y el servido
 * Correcta separación de responsabilidades entre modelo de dominio y capa de comunicación.
 * Correcto empleo de sockets, incluyendo manejo de errores y evitando los fenómenos conocidos como [_short read y short write_](https://cs61.seas.harvard.edu/site/2018/FileDescriptors/).
 
+#### Solución:
+para el protocolo definido de comunicación entre cliente y servidor, se utilizara el formato TLV (Type-Length-Value) para el envío de los datos. Existira al inicio un campo que indicara el tipo del mensaje (apuesta, confirmacion, etc). Para esto se reservara 1 byte. Luego se indicara la longitud del mensaje en bytes, para lo cual se reservara 2 bytes. 
+
+En caso que se envie un mensaje tipo apuesta (Type = 0001), el campo Value contendra los datos de la apuesta serializados siguiendo el siguiente formato:
+
+Exiten los tipos de datos:
+* 0001 Integer (4 bytes) - Representa un numero entero.
+* 0010 String (variable) - Representa una cadena de caracteres.
+* 0011 Date (10 bytes) - Representa una fecha en formato AAAA-MM-DD.
+
+| Field             | Type  | Length (bytes) | Description                       |
+|-------------------|-------|----------------|-----------------------------------|
+| Id de la agencia  | 0001  | 4              | Identificador unico de la agencia |
+| Nombre            | 0010  | Variable       | Nombre del apostador              |
+| Apellido          | 0010  | Variable       | Apellido del apostador            |
+| DNI               | 0001  | 4              | Documento Nacional de Identidad   |
+| Fecha Nac.        | 0011  | 10             | Fecha de nacimiento (AAAA-MM-DD)  |
+| Numero            | 0001  | 4              | Numero apostado                   |
+
+En caso que se envie un mensaje tipo confirmacion (Type = 0010), el campo Value contendra los siguientes datos:
+| Field             | Type  | Length (bytes) | Description                                                   |
+|-------------------|-------|----------------|---------------------------------------------------------------|
+| Aceptado          | 0001  | 4              | Se envia mensaje de ack de que el servidor recibio la apuesta. Se envia 0x000 |                                              

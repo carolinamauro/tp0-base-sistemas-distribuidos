@@ -2,7 +2,8 @@ import sys
 
 CLIENT_NAMES = ["Carolina", "Facuando", "Lucia", "Franco", "Diego"]
 CLIENT_SURNAMES = ["Gonzalez", "Perez", "Lopez", "Garcia", "Rodriguez"]
-CLIENT_DNIS = ["34098765", "23456789", "34567890", "45678901", "56789012"]
+CLIENT_DNIS = ["34098765", "43456789", "34567890", "45678901", "56789012"]
+CLIENT_BIRTH_DATES = ["1990-01-01", "2001-05-15", "1996-07-20", "2004-12-30", "2007-03-10"]
 
 COMPOSE_TEMPLATE = """\
 name: tp0
@@ -36,7 +37,7 @@ CLIENT_TEMPLATE = """\
       - NOMBRE={client_name}
       - APELLIDO={client_surname}
       - DNI={client_dni}
-      - FECHA_NACIMIENTO=1990-01-01
+      - FECHA_NACIMIENTO={birth_date}
       - NUMERO={client_bet_number}
     networks: 
       - testing_net
@@ -54,7 +55,8 @@ def generate_compose(file_name, clients_amount):
                                               client_name=CLIENT_NAMES[i-1],
                                               client_surname=CLIENT_SURNAMES[i-1],
                                               client_dni=CLIENT_DNIS[i-1],
-                                              client_bet_number=1000 + i)
+                                              client_bet_number=1000 + i,
+                                              birth_date=CLIENT_BIRTH_DATES[i-1])
     compose = compose.format(clients=clients_str)
     
     with open(file_name, "w") as f:
