@@ -13,6 +13,13 @@ import (
 
 var log = logging.MustGetLogger("log")
 
+const (
+	SIZE_ACK_MESSAGE uint32 = 0x04
+	ACK_MESSAGE_TYPE uint8 = 0xFF
+	ACK_OK uint8 = 0x00
+)
+
+
 // AgencyConfig Configuration used by the agency client
 type AgencyConfig struct {
 	ID            string
