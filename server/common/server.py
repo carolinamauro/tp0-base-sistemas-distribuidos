@@ -9,14 +9,14 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
-        self._active_client_connections = []
+        self._active_agency_connections = []
 
     def run(self):
         """
         Dummy Server loop
 
         Server that accept a new connections and establishes a
-        communication with a client. After client with communucation
+        communication with a agency. After agency with communucation
         finishes, servers starts to accept new connections again
         """
 
@@ -24,35 +24,35 @@ class Server:
         # the server
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
         while True:
-            client_sock = self.__accept_new_connection()
-            self._active_client_connections.append(client_sock)
-            self.__handle_client_connection(client_sock)
+            agency_sock = self.__accept_new_connection()
+            self._active_agency_connections.append(agency_sock)
+            self.__handle_agency_connection(agency_sock)
 
-    def __handle_client_connection(self, client_sock):
+    def __handle_agency_connection(self, agency_sock):
         """
-        Read message from a specific client socket and closes the socket
+        Read message from a specific agency socket and closes the socket
 
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
+        If a problem arises in the communication with the agency, the
+        agency socket will also be closed
         """
         try:
             # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
+            msg = agency_sock.recv(1024).rstrip().decode('utf-8')
+            addr = agency_sock.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            agency_sock.send("{}\n".format(msg).encode('utf-8'))
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
-            client_sock.close()
-            self._active_client_connections.remove(client_sock)
+            agency_sock.close()
+            self._active_agency_connections.remove(agency_sock)
 
     def __accept_new_connection(self):
         """
         Accept new connections
 
-        Function blocks until a connection to a client is made.
+        Function blocks until a connection to a agency is made.
         Then connection created is printed and returned
         """
 
@@ -64,9 +64,9 @@ class Server:
     
     def __handle_sigterm_signal(self, signum, frame):
         logging.info('action: SIGTERM signal received | result: in_progress')
-        for client_socket in self._active_client_connections:
-            client_socket.close()
-            logging.info('action: SIGTERM signal received | result: success | client socket: {client_socket}')
+        for agency_socket in self._active_agency_connections:
+            agency_socket.close()
+            logging.info('action: SIGTERM signal received | result: success | agency socket: {agency_socket}')
         self._server_socket.close()            
         logging.info('action: SIGTERM signal received | result: success | server socket: {self._server_socket}')
         sys.exit(0)
