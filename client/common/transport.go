@@ -17,6 +17,13 @@ func NewTransport(conn net.Conn) *Transport {
 	}
 }
 
+func (tm *Transport) SendMessage(messageType uint8, message []byte) error {
+	messageToSend := make([]byte, 0, SIZE_MESSAGE_TYPE+len(message))
+	messageToSend = append(messageToSend, messageType)
+	messageToSend = append(messageToSend, message...)
+	return tm.SendAll(messageToSend)
+}
+
 // SendAll Sends all the bytes of the message
 // Returns an error in case of failure
 func (tm *Transport) SendAll(message []byte) error {

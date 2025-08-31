@@ -48,19 +48,35 @@ class Server:
         """
         try:
             # Receive message from agency
-            bet = transport.receive_menssage()
-            logging.info(f'action: receive_message | result: success | ip: {transport.addr()} | msg: {bet.agency}, {bet.first_name}, {bet.last_name}, {bet.document}, {bet.birthdate}, {bet.number}')
-            # Store bet information
-            store_bets([bet])
-            # Log bet storage
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-             # Send ACK to agency
-            transport.send_ack()
+            message = transport.receive_message_type()
+            if message is None:
+                raise OSError("Connection closed by the other side")
+            if transport.is_chunk_message(message):
+                self.__handle_chunck_message(transport)
+                while True:
+                    message = transport.receive_message_type()
+                    if message is None:
+                        raise OSError("Connection closed by the other side")
+                    if transport.is_last_chunk_message(message):
+                        self.__handle_chunck_message(transport)
+                        break
+                    elif transport.is_chunk_message(message):
+                        self.__handle_chunck_message(transport)
+                    else:
+                        raise OSError("Invalid message type received")
+            else:
+                raise OSError("Invalid message type received")
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             transport.close()
             self._active_agencies_connections.remove(transport)
+            
+    def __handle_chunck_message(self, transport):
+        bets = transport.receive_chunk()
+        store_bets(bets)
+        logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+        transport.send_ack()
 
     def __accept_new_connection(self):
         """

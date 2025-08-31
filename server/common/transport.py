@@ -2,17 +2,18 @@ import socket
 import logging
 from common.utils import Bet
 
-MESSAGE_TYPE_BET = 1
 SIZE_SERIALIZED_MESSAGE_LENGHT = 2
 MESSAGE_TYPE_SIZE = 1
 
-ACK_MESSAGE_TYPE = 0xFF
+MESSAGE_TYPE_BET = 1
+MESSAGE_TYPE_CHUNK = 2
+MESSAGE_TYPE_LAST_CHUNK = 3
+MESSAGE_TYPE_ACK = 0xFF
 ACK_OK = 0x00
 
 class Transport:
   def __init__(self, agencySocket: socket):
     self._agency_socket = agencySocket
-  
    
   def __receive_all(self):
     """" 
@@ -33,21 +34,43 @@ class Transport:
       bytes += data
     return bytes
   
-  def receive_menssage(self):
+  def receive_message_type(self):
+    """
+    Receives the message type from the agency socket
+    
+    Returns the message type as an integer in case of success.
+    Otherwise, it returns None.
+    """
+    message_type = self._agency_socket.recv(MESSAGE_TYPE_SIZE)
+    if message_type:
+      return message_type[0]
+    else:
+      return None
+    
+  def is_chunk_message(self, message_type):
+    return message_type == MESSAGE_TYPE_CHUNK
+
+  def is_last_chunk_message(self, message_type):
+    return message_type == MESSAGE_TYPE_LAST_CHUNK
+  
+  def receive_chunk(self):
     """
     Receives a message from the agency socket
     
     Returns a Bet object in case of success when the message type is
     MESSAGE_TYPE_BET. Otherwise, it returns None.
     """
-    message_type = self._agency_socket.recv(MESSAGE_TYPE_SIZE)
     data = self.__receive_all()
-    
-    if message_type and message_type[0] == MESSAGE_TYPE_BET:
-      return Bet.deserialize(data)
-    else:
-      pass
-    
+    bets = []
+    while data:
+      length = int.from_bytes(data[1:3], byteorder='big')
+      bet_serialized = data[3:3+length]
+      bet = Bet.deserialize(bet_serialized)
+      bets.append(bet)
+      data = data[3+length:]
+      
+    return bets
+  
   def __send_all(self, bytes: bytes):
     """
     Sends all the bytes of the message passed as parameter.
@@ -66,7 +89,7 @@ class Transport:
     """
     Sends an ACK message to the agency socket
     """
-    self.send_message(ACK_MESSAGE_TYPE, ACK_OK.to_bytes(1, byteorder='big'))
+    self.send_message(MESSAGE_TYPE_ACK, ACK_OK.to_bytes(1, byteorder='big'))
     
   def send_message(self, message_type: int, data: bytes):
     """
