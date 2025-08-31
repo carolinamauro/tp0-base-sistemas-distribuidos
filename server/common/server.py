@@ -41,7 +41,7 @@ class Server:
         try:
             # Receive message from agency
             bet = transport.receive_menssage()
-            logging.info(f'action: receive_message | result: success | ip: {transport.addr} | msg: {bet}')
+            logging.info(f'action: receive_message | result: success | ip: {transport.addr()} | msg: {bet.agency}, {bet.first_name}, {bet.last_name}, {bet.document}, {bet.birthdate}, {bet.number}')
             # Store bet information
             store_bets([bet])
             # Send ACK to agency

@@ -104,7 +104,6 @@ func (c *Agency) StartAgencyLoop() {
 		)
 	}
 
-	
 	c.transport.Close()
 }
 

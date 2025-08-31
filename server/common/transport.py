@@ -25,7 +25,7 @@ class Transport:
     return bytes
   
   def receive_menssage(self):
-    message_type = self._agency_socket.recv(MESSAGE_TYPE_SIZE) 
+    message_type = self._agency_socket.recv(MESSAGE_TYPE_SIZE)
     data = self.__receive_all()
     
     if message_type[0] == MESSAGE_TYPE_BET:
@@ -55,5 +55,5 @@ class Transport:
     self._agency_socket.close()
     
   def addr(self):
-    return self._agency_socket.getpeername()[0]
+    return self._agency_socket.getsockname()[0]
   
