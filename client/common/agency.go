@@ -106,6 +106,8 @@ func (c *Agency) StartAgencyLoop() {
 			bet.number,
 		)
 	}
+
+	time.Sleep(c.config.LoopPeriod)
 	
 	c.transport.Close()
 	os.Exit(0)
