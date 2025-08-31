@@ -8,6 +8,13 @@ STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
 LOTTERY_WINNER_NUMBER = 7574
 
+AGENCY_ID_TYPE        = 0x10
+CLIENT_NAME_TYPE      = 0x11
+CLIENT_SURNAME_TYPE   = 0x12
+CLIENT_DNI_TYPE       = 0x13
+CLIENT_BIRTHDATE_TYPE = 0x14
+BET_NUMBER_TYPE       = 0x15
+
 
 """ A lottery bet registry. """
 class Bet:
@@ -23,6 +30,34 @@ class Bet:
         self.document = document
         self.birthdate = datetime.date.fromisoformat(birthdate)
         self.number = int(number)
+        
+    def deserialize(bytes: str):
+        n = 0
+        bet = {}
+        while n < len(bytes):
+            t = bytes[n]
+            l = bytes[n+1]
+            v = bytes[n+2:n+2+l]
+            n += 2 + l
+            
+            if t == AGENCY_ID_TYPE:
+                bet["agency"] = int.from_bytes(v, byteorder='big')
+            elif t == CLIENT_NAME_TYPE:
+                bet["first_name"] = v.decode('utf-8')
+            elif t == CLIENT_SURNAME_TYPE:
+                bet["last_name"] = v.decode('utf-8')
+            elif t == CLIENT_DNI_TYPE:
+                bet["document"] = v.decode('utf-8')
+            elif t == CLIENT_BIRTHDATE_TYPE:
+                bet["birthdate"] = v.decode('utf-8')
+            elif t == BET_NUMBER_TYPE:
+                bet["number"] = int.from_bytes(v, byteorder='big')
+            else:
+                pass
+            
+        return Bet(bet["agency"], bet["first_name"], bet["last_name"], bet["document"], bet["birthdate"], bet["number"])
+        
+        
 
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:

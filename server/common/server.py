@@ -2,6 +2,8 @@ import socket
 import logging
 import signal
 import sys
+from transport import Transport
+from utils import store_bets
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -9,7 +11,7 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
-        self._active_agency_connections = []
+        self._active_agencies_connections = []
 
     def run(self):
         """
@@ -25,7 +27,7 @@ class Server:
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
         while True:
             agency_sock = self.__accept_new_connection()
-            self._active_agency_connections.append(agency_sock)
+            self._active_agencies_connections.append(agency_sock)
             self.__handle_agency_connection(agency_sock)
 
     def __handle_agency_connection(self, agency_sock):
@@ -37,11 +39,13 @@ class Server:
         """
         try:
             # TODO: Modify the receive to avoid short-reads
-            msg = agency_sock.recv(1024).rstrip().decode('utf-8')
-            addr = agency_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            agency_sock.send("{}\n".format(msg).encode('utf-8'))
+            transport = Transport(agency_sock)
+            bet = transport.receive_menssage()
+            store_bets([bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: ${bet.document} | numero: ${bet.number}')
+            # Send ACK to agency
+            transport.send_ack()
+            # logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
@@ -64,7 +68,7 @@ class Server:
     
     def __handle_sigterm_signal(self, signum, frame):
         logging.info('action: SIGTERM signal received | result: in_progress')
-        for agency_socket in self._active_agency_connections:
+        for agency_socket in self._active_agencies_connections:
             agency_socket.close()
             logging.info('action: SIGTERM signal received | result: success | agency socket: {agency_socket}')
         self._server_socket.close()            
