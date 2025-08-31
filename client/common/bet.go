@@ -4,21 +4,6 @@ import (
 	"encoding/binary"
 )
 
-const (
-	MESSAGE_TYPE_BET uint8 = 0x01
-	
-	SIZE_MESSAGE_TYPE	int = 0x01
-	SIZE_SERIALIZED_BET_LENGHT int = 0x02
-	SIZE_UINT32 uint8 = 0x04
-
-	AGENCY_ID_TYPE = 0x10
-	CLIENT_NAME_TYPE = 0x11
-	CLIENT_SURNAME_TYPE = 0x12
-	CLIENT_DNI_TYPE = 0x13
-	CLIENT_BIRTHDATE_TYPE = 0x14
-	BET_NUMBER_TYPE = 0x15
-)
-
 // Bet struct that encapsulates the bet information
 type Bet struct {
 	agencyId			 			uint32

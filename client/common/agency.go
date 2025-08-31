@@ -12,13 +12,6 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-const (
-	SIZE_ACK_MESSAGE uint32 = 0x04
-	ACK_MESSAGE_TYPE uint8 = 0xFF
-	ACK_OK uint8 = 0x00
-)
-
-
 // AgencyConfig Configuration used by the agency client
 type AgencyConfig struct {
 	ID            string
@@ -102,7 +95,7 @@ func (a *Agency) StartAgencyLoop() {
 			a.config.ID,
 			err,
 		)
-	} else if len(ackMessage) > 0 && ackMessage[0] == ACK_MESSAGE_TYPE && ackMessage[3] == ACK_OK { 
+	} else if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK { 
 		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
 			bet.clientDNI,
 			bet.number,
