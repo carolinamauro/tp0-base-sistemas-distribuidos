@@ -96,22 +96,38 @@ Se deberá implementar un módulo de comunicación entre el cliente y el servido
 * Correcto empleo de sockets, incluyendo manejo de errores y evitando los fenómenos conocidos como [_short read y short write_](https://cs61.seas.harvard.edu/site/2018/FileDescriptors/).
 
 #### Solución:
-para el protocolo definido de comunicación entre cliente y servidor, se utilizara el formato TLV (Type-Length-Value) para el envío de los datos. Existira al inicio un campo que indicara el tipo del mensaje (apuesta, confirmacion, etc). Para esto se reservara 1 byte. Luego se indicara la longitud del mensaje en bytes, para lo cual se reservara 2 bytes. 
+Para el protocolo definido de comunicación entre cliente y servidor, se utilizara el formato TLV (Type-Length-Value) para el envío de los datos. Existira al inicio un campo que indicara el tipo del mensaje (apuesta, confirmacion, etc). Para esto se reservara 1 byte. Luego se indicara la longitud del mensaje en bytes, para lo cual se reservara 2 bytes. Por ultimo se enviara el mensaje serializado en bytes.
 
 Se seralizara en big-endian.
 
 En caso que se envie un mensaje tipo apuesta (Type = 0x01), el campo Value contendra los datos de la apuesta serializados siguiendo el siguiente formato:
 
-| Field             | Length (bytes) | Description                       |
-|-------------------|----------------|-----------------------------------|
-| Id de la agencia  | 4              | Identificador unico de la agencia |
-| Nombre            | Variable       | Nombre del apostador              |
-| Apellido          | Variable       | Apellido del apostador            |
-| DNI               | 4              | Documento Nacional de Identidad   |
-| Fecha Nac.        | 10             | Fecha de nacimiento (YYYY-MM-DD)  |
-| Numero            | 4              | Numero apostado                   |
+| Field             | Type           | Length (bytes) | Description                       |
+|-------------------|----------------|----------------|-----------------------------------|
+| Id de la agencia  | 0x10           | 4              | Identificador unico de la agencia |
+| Nombre            | 0x11           | Variable       | Nombre del apostador              |
+| Apellido          | 0x12           | Variable       | Apellido del apostador            |
+| DNI               | 0x13           | Variable       | Documento Nacional de Identidad   |
+| Fecha Nac.        | 0x14           | Variable       | Fecha de nacimiento (YYYY-MM-DD)  |
+| Numero            | 0x15           | 4              | Numero apostado                   |
 
 En caso que se envie un mensaje tipo confirmacion (Type = 0x01), el campo Value contendra los siguientes datos:
-| Field             | Length (bytes) | Description                                                   |
-|-------------------|----------------|---------------------------------------------------------------|
-| Aceptado          | 4              | Se envia mensaje de ack de que el servidor recibio la apuesta. Se envia 0x000 |                                              
+| Field             | Type           | Length (bytes) | Description                                                   |
+|-------------------|----------------|----------------|---------------------------------------------------------------|
+| ACK               | 0xFF           | 4              | Se envia mensaje de ack de que el servidor recibio la apuesta. Se envia 0x00 |                                              
+
+Por ejemplo, para enviar una apuesta del apostador "Carolina Gonzalez", con DNI 34098765, nacimiento 1990-01-01 y numero 1001, desde la agencia con ID 1, se enviaria el siguiente mensaje:
+
+01 → MessageType = BET.
+
+00 36 → longitud del payload = 54 bytes.
+
+| Hexadecimal                           | Significado                         | Valor interpretado      |
+| ------------------------------------- | ----------------------------------- | ----------------------- |
+| `10 04 00 00 00 01`                   | AGENCY\_ID (Type=16, Len=4)         | `0x00000001` = **1**    |
+| `11 08 43 61 72 6F 6C 69 6E 61`       | CLIENT\_NAME (Type=17, Len=8)       | `"Carolina"`            |
+| `12 08 47 6F 6E 7A 61 6C 65 7A`       | CLIENT\_SURNAME (Type=18, Len=8)    | `"Gonzalez"`            |
+| `13 08 33 34 30 39 38 37 36 35`       | CLIENT\_DNI (Type=19, Len=8)        | `"34098765"`            |
+| `20 0A 31 39 39 30 2D 30 31 2D 30 31` | CLIENT\_BIRTHDATE (Type=20, Len=10) | `"1990-01-01"`          |
+| `15 04 00 00 03 E9`                   | BET\_NUMBER (Type=21, Len=4)        | `0x000003E9` = **1001** |
+
