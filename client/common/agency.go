@@ -79,29 +79,36 @@ func (c *Agency) StartAgencyLoop() {
 	bet := getBetFromEnvironment()
 	betMessage := bet.Serialize()
 	c.createAgencySocket()
+
 	err := c.transport.SendAll(betMessage)
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | agency_id: %v | error: %v",
 			c.config.ID,
 			err,
 		)
-		// TODO: cerrar conexion
+		c.transport.Close()
+		os.Exit(1)
 	}
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
 	err = c.transport.ReceiveAll(ackMessage)
 	if err != nil {
-		// TODO: cerrar conexion
-		return
+		c.log.Errorf("action: receive_ack | result: fail | agency_id: %v | error: %v",
+			c.config.ID,
+			err,
+		)
+		c.transport.Close()
+		os.Exit(1)
 	}
-	if ackMessage[0] == ACK_MESSAGE_TYPE && ackMessage[2] == ACK_OK {
+
+	if ackMessage[0] == ACK_MESSAGE_TYPE && ackMessage[3] == ACK_OK {
 		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
 			bet.clientDNI,
 			bet.number,
 		)
 	}
 	
-	err = c.transport.Close()
-	
+	c.transport.Close()
+	os.Exit(0)
 }
 
 

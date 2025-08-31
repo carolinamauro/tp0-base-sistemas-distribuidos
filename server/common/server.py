@@ -2,8 +2,8 @@ import socket
 import logging
 import signal
 import sys
-from transport import Transport
-from utils import store_bets
+from common.transport import Transport
+from common.utils import store_bets
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -42,7 +42,7 @@ class Server:
             transport = Transport(agency_sock)
             bet = transport.receive_menssage()
             store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: ${bet.document} | numero: ${bet.number}')
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
             # Send ACK to agency
             transport.send_ack()
             # logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
@@ -50,7 +50,7 @@ class Server:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             agency_sock.close()
-            self._active_agency_connections.remove(agency_sock)
+            self._active_agencies_connections.remove(agency_sock)
 
     def __accept_new_connection(self):
         """
