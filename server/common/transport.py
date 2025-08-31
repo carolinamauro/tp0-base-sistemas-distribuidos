@@ -28,7 +28,7 @@ class Transport:
     message_type = self._agency_socket.recv(MESSAGE_TYPE_SIZE)
     data = self.__receive_all()
     
-    if message_type[0] == MESSAGE_TYPE_BET:
+    if message_type and message_type[0] == MESSAGE_TYPE_BET:
       return Bet.deserialize(data)
     else:
       pass
