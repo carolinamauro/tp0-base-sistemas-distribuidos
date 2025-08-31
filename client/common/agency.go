@@ -73,7 +73,6 @@ func (c *Agency) StartAgencyLoop() {
     go func() {
         <-signalChannel
         c.handleSigtermSignal()
-		os.Exit(0)
     }()
 
 	bet := getBetFromEnvironment()
@@ -107,7 +106,6 @@ func (c *Agency) StartAgencyLoop() {
 
 	
 	c.transport.Close()
-	time.Sleep(c.config.LoopPeriod)
 }
 
 
