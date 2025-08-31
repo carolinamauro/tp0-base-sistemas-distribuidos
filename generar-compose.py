@@ -37,7 +37,7 @@ CLIENT_TEMPLATE = """\
       - NOMBRE={client_name}
       - APELLIDO={client_surname}
       - DNI={client_dni}
-      - FECHA_NACIMIENTO={birth_date}
+      - NACIMIENTO={birth_date}
       - NUMERO={client_bet_number}
     networks: 
       - testing_net

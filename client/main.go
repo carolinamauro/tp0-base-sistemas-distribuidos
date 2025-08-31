@@ -103,13 +103,13 @@ func main() {
 	// Print program config with debugging purposes
 	PrintConfig(v)
 
-	clientConfig := common.ClientConfig{
+	agencyConfig := common.AgencyConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
 		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+	agency := common.NewAgency(agencyConfig)
+	agency.StartAgencyLoop()
 }

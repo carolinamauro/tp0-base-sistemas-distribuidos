@@ -7,8 +7,8 @@ import (
 const (
 	MESSAGE_TYPE_BET uint8 = 0x01
 	
-	SIZE_MESSAGE_TYPE	uint8 = 0x01
-	SIZE_SERIALIZED_BET_LENGHT uint16 = 0x02
+	SIZE_MESSAGE_TYPE	int = 0x01
+	SIZE_SERIALIZED_BET_LENGHT int = 0x02
 	SIZE_UINT32 uint8 = 0x04
 
 	AGENCY_ID_TYPE = 0x10
@@ -28,7 +28,7 @@ type Bet struct {
 	clientBirthDate     string 
 }
 
-func NewBet(agencyId uint32, number uint32, clientName string, clientSurname, clientDNI, clientBirthDate) *Bet {
+func NewBet(agencyId uint32, number uint32, clientName string, clientSurname string, clientDNI string, clientBirthDate string) *Bet {
 	return &Bet{
 		agencyId:       	agencyId,
 		number:       		number,
@@ -59,8 +59,6 @@ func addBetField(serializedBet *[]byte, fieldType uint8, fieldValue []byte) {
 func (bet *Bet) Serialize() []byte {
 	var serializedBet []byte
 
-	messageType := uint8(MESSAGE_TYPE_BET)
-
 	addBetField(&serializedBet, AGENCY_ID_TYPE, uint32ToBytes(bet.agencyId))
 	addBetField(&serializedBet, CLIENT_NAME_TYPE, []byte(bet.clientName))
 	addBetField(&serializedBet, CLIENT_SURNAME_TYPE, []byte(bet.clientSurname))
@@ -69,7 +67,7 @@ func (bet *Bet) Serialize() []byte {
 	addBetField(&serializedBet, BET_NUMBER_TYPE, uint32ToBytes(bet.number))
 
 	totalSize := uint16ToBytes(uint16(len(serializedBet)))
-	messageToSend := make([]byte, 0, MESSAGE_TYPE_SIZE+SIZE_SERIALIZED_BET_LENGHT+len(serializedBet))
+	messageToSend := make([]byte, 0, SIZE_MESSAGE_TYPE+SIZE_SERIALIZED_BET_LENGHT+len(serializedBet))
 	messageToSend = append(messageToSend, MESSAGE_TYPE_BET)
 	messageToSend = append(messageToSend, totalSize...)
 	messageToSend = append(messageToSend, serializedBet...)

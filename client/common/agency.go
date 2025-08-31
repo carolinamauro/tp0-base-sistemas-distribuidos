@@ -1,14 +1,13 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
 	"net"
 	"time"
 	"os"
 	"os/signal"
 	"syscall"
 	"github.com/op/go-logging"
+	"strconv"
 )
 
 var log = logging.MustGetLogger("log")
@@ -31,7 +30,7 @@ type AgencyConfig struct {
 // Agency Entity that encapsulates how
 type Agency struct {
 	config 							AgencyConfig
-	transport   	Transport
+	transport   				*Transport
 }
 
 // NewAgency Initializes a new Agency receiving the configuration
@@ -61,8 +60,8 @@ func (c *Agency) createAgencySocket() error {
 
 func (c *Agency) handleSigtermSignal() {
 	log.Infof("action: SIGTERM signal received| result: in_progress | agency_id: %v", c.config.ID)
-	if c.conn != nil {
-		c.conn.Close()
+	if c.transport.conn != nil {
+		c.transport.Close()
 	}
 	log.Infof("action: SIGTERM signal received| result: success | agency_id: %v", c.config.ID)
 }
@@ -89,7 +88,7 @@ func (c *Agency) StartAgencyLoop() {
 		// TODO: cerrar conexion
 	}
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
-	err = c.Transport.ReceiveAll(ackMessage)
+	err = c.transport.ReceiveAll(ackMessage)
 	if err != nil {
 		// TODO: cerrar conexion
 		return
@@ -107,31 +106,28 @@ func (c *Agency) StartAgencyLoop() {
 
 
 func getBetFromEnvironment() *Bet {
-	agencyId = os.Getenv("CLI_ID")
-	clientName = os.Getenv("NOMBRE")
-	clientSurname = os.Getenv("APELLIDO")
-	clientDNI = os.Getenv("DNI")
-	clientBirthDate = os.Getenv("FECHA_NACIMIENTO")
-	clientBetNumber = os.Getenv("NUMERO")
+	agencyId := os.Getenv("CLI_ID")
+	clientName := os.Getenv("NOMBRE")
+	clientSurname := os.Getenv("APELLIDO")
+	clientDNI := os.Getenv("DNI")
+	clientBirthDate := os.Getenv("NACIMIENTO")
+	clientBetNumber := os.Getenv("NUMERO")
 
-	agencyIdInt, err := uint32(strconv.Atoi(agencyId))
+	agencyIdUint64, err := strconv.ParseUint(agencyId, 10, 32)
 	if err != nil {
 		log.Criticalf("action: convert_agency_id | result: fail | agency_id: %v | error: %v",
-			agencyId,
-			err,
-		)
+			agencyId, err)
 		os.Exit(1)
 	}
 
-	clientBetNumberInt, err := uint32(strconv.Atoi(clientBetNumber))
+	clientBetNumberUint64, err := strconv.ParseUint(clientBetNumber, 10, 32)
 	if err != nil {
 		log.Criticalf("action: convert_bet_number | result: fail | bet_number: %v | error: %v",
-			clientBetNumber,
-			err,
-		)
+			clientBetNumber, err)
 		os.Exit(1)
 	}
 
-	bet := NewBet(agencyId, clientBetNumber, clientName, clientSurname, clientDNI, clientBirthDate)
+
+	bet := NewBet(uint32(agencyIdUint64), uint32(clientBetNumberUint64), clientName, clientSurname, clientDNI, clientBirthDate)
 	return bet
 }
