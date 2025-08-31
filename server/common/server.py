@@ -27,10 +27,17 @@ class Server:
         # the server
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
         while self._listening:
-            agency_sock = self.__accept_new_connection()
-            transport = Transport(agency_sock)
-            self._active_agencies_connections.append(transport)
-            self.__handle_agency_connection(transport)
+            try:
+                agency_sock = self.__accept_new_connection()
+                transport = Transport(agency_sock)
+                self._active_agencies_connections.append(transport)
+                self.__handle_agency_connection(transport)
+            except OSError as e:
+                if self._listening:
+                    logging.error(f"action: accept_connections | result: fail | error: {e}")
+                else:
+                    logging.info("action: server_shutdown | result: in_progress")
+                break           
 
     def __handle_agency_connection(self, transport):
         """
@@ -70,12 +77,13 @@ class Server:
         return c
     
     def __handle_sigterm_signal(self, signum, frame):
+        self._listening = False
         logging.info('action: SIGTERM signal received | result: in_progress')
         for transport in self._active_agencies_connections:
             transport.close()
-            logging.info('action: SIGTERM signal received | result: success | agency socket: {transport._agency_socket}')
+            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {transport._agency_socket}')
+        socket_addr = self._server_socket.getsockname()[0]
         self._server_socket.close()            
-        logging.info('action: SIGTERM signal received | result: success | server socket: {self._server_socket}')
-        self._listening = False
+        logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
 
         

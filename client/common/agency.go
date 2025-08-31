@@ -58,13 +58,15 @@ func (c *Agency) createAgencySocket() error {
 	return nil
 }
 
-func (c *Agency) handleSigtermSignal() {
-	log.Infof("action: SIGTERM signal received| result: in_progress | agency_id: %v", c.config.ID)
-	if c.transport.conn != nil {
-		c.transport.Close()
+func (c *Client) handleSigtermSignal() {
+	log.Infof("action: SIGTERM signal received | result: in_progress | client_id: %v", c.config.ID)
+	// Close the connection if it is open
+	if c.conn != nil {
+		c.conn.Close()
+		log.Infof("action: SIGTERM signal received | result: success | client_id: %v", c.config.ID)
 	}
-	log.Infof("action: SIGTERM signal received| result: success | agency_id: %v", c.config.ID)
 }
+
 
 // StartAgencyLoop Send messages to the Agency until some time threshold is met
 func (c *Agency) StartAgencyLoop() {
@@ -73,6 +75,7 @@ func (c *Agency) StartAgencyLoop() {
     go func() {
         <-signalChannel
         c.handleSigtermSignal()
+				close(signalChannel)
     }()
 
 	bet := getBetFromEnvironment()
