@@ -33,17 +33,17 @@ En caso que se envie un mensaje tipo apuesta (Type = 0x01), el campo Value conte
 
 | Field             | Type           | Length (bytes) | Description                       |
 |-------------------|----------------|----------------|-----------------------------------|
-| Id de la agencia  | 0x10           | 4              | Identificador unico de la agencia |
+| Id de la agencia  | 0x10           | 2              | Identificador unico de la agencia |
 | Nombre            | 0x11           | Variable       | Nombre del apostador              |
 | Apellido          | 0x12           | Variable       | Apellido del apostador            |
 | DNI               | 0x13           | Variable       | Documento Nacional de Identidad   |
 | Fecha Nac.        | 0x14           | Variable       | Fecha de nacimiento (YYYY-MM-DD)  |
-| Numero            | 0x15           | 4              | Numero apostado                   |
+| Numero            | 0x15           | 2              | Numero apostado                   |
 
-En caso que se envie un mensaje tipo confirmacion (Type = 0x01), el campo Value contendra los siguientes datos:
+En caso que se envie un mensaje tipo confirmacion (Type = 0xFF), el campo Value contendra los siguientes datos:
 | Field             | Type           | Length (bytes) | Description                                                   |
 |-------------------|----------------|----------------|---------------------------------------------------------------|
-| ACK               | 0xFF           | 4              | Se envia mensaje de ack de que el servidor recibio la apuesta. Se envia 0x00 |                                              
+| ACK               | 0x00           | 4              | Mensaje recicibido correctamente (0x00000000)                 |
 
 Por ejemplo, para enviar una apuesta del apostador "Carolina Gonzalez", con DNI 34098765, nacimiento 1990-01-01 y numero 1001, desde la agencia con ID 1, se enviaria el siguiente mensaje:
 

@@ -6,8 +6,8 @@ import (
 
 // Bet struct that encapsulates the bet information
 type Bet struct {
-	agencyId			 			uint32
-	number        			uint32    
+	agencyId			 			uint16
+	number        			uint16    
 	clientName    			string 
 	clientSurname 			string 
 	clientDNI    			  string 
@@ -15,7 +15,7 @@ type Bet struct {
 }
 
 // NewBet Initializes a new Bet with the given parameters
-func NewBet(agencyId uint32, number uint32, clientName string, clientSurname string, clientDNI string, clientBirthDate string) *Bet {
+func NewBet(agencyId uint16, number uint16, clientName string, clientSurname string, clientDNI string, clientBirthDate string) *Bet {
 	return &Bet{
 		agencyId:       	agencyId,
 		number:       		number,
@@ -26,16 +26,9 @@ func NewBet(agencyId uint32, number uint32, clientName string, clientSurname str
 	}
 }
 
-// Serialize serializes the Bet struct into a byte slice according to the specified format
-func uint32ToBytes(num uint32) []byte {
-	bytes := make([]byte, SIZE_UINT32)
-	binary.BigEndian.PutUint32(bytes, num)
-	return bytes
-}
-
 // uint16ToBytes converts a uint16 to a byte slice in big-endian order
 func uint16ToBytes(num uint16) []byte {
-	bytes := make([]byte, 2)
+	bytes := make([]byte, SIZE_UINT16)
 	binary.BigEndian.PutUint16(bytes, num)
 	return bytes
 }
@@ -52,12 +45,12 @@ func addBetField(serializedBet *[]byte, fieldType uint8, fieldValue []byte) {
 func (bet *Bet) Serialize() []byte {
 	var serializedBet []byte
 
-	addBetField(&serializedBet, AGENCY_ID_TYPE, uint32ToBytes(bet.agencyId))
+	addBetField(&serializedBet, AGENCY_ID_TYPE, uint16ToBytes(bet.agencyId))
 	addBetField(&serializedBet, CLIENT_NAME_TYPE, []byte(bet.clientName))
 	addBetField(&serializedBet, CLIENT_SURNAME_TYPE, []byte(bet.clientSurname))
 	addBetField(&serializedBet, CLIENT_DNI_TYPE, []byte(bet.clientDNI))
 	addBetField(&serializedBet, CLIENT_BIRTHDATE_TYPE, []byte(bet.clientBirthDate))
-	addBetField(&serializedBet, BET_NUMBER_TYPE, uint32ToBytes(bet.number))
+	addBetField(&serializedBet, BET_NUMBER_TYPE, uint16ToBytes(bet.number))
 
 	totalSize := uint16ToBytes(uint16(len(serializedBet)))
 	messageToSend := make([]byte, 0, SIZE_MESSAGE_TYPE+SIZE_SERIALIZED_BET_LENGHT+len(serializedBet))
