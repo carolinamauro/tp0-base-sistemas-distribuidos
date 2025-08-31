@@ -87,7 +87,6 @@ func (c *Agency) StartAgencyLoop() {
 			err,
 		)
 		c.transport.Close()
-		os.Exit(1)
 	}
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
 	err = c.transport.ReceiveAll(ackMessage)
@@ -97,7 +96,6 @@ func (c *Agency) StartAgencyLoop() {
 			err,
 		)
 		c.transport.Close()
-		os.Exit(1)
 	}
 
 	if ackMessage[0] == ACK_MESSAGE_TYPE && ackMessage[3] == ACK_OK {
@@ -107,10 +105,9 @@ func (c *Agency) StartAgencyLoop() {
 		)
 	}
 
-	time.Sleep(c.config.LoopPeriod)
 	
 	c.transport.Close()
-	os.Exit(0)
+	time.Sleep(c.config.LoopPeriod)
 }
 
 
@@ -126,14 +123,14 @@ func getBetFromEnvironment() *Bet {
 	if err != nil {
 		log.Criticalf("action: convert_agency_id | result: fail | agency_id: %v | error: %v",
 			agencyId, err)
-		os.Exit(1)
+			return nil
 	}
 
 	clientBetNumberUint64, err := strconv.ParseUint(clientBetNumber, 10, 32)
 	if err != nil {
 		log.Criticalf("action: convert_bet_number | result: fail | bet_number: %v | error: %v",
 			clientBetNumber, err)
-		os.Exit(1)
+			return nil
 	}
 
 
