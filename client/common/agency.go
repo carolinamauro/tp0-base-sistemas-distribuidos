@@ -45,58 +45,58 @@ func NewAgency(config AgencyConfig) *Agency {
 // CreateAgencySocket Initializes Agency socket. In case of
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
-func (c *Agency) createAgencySocket() error {
-	conn, err := net.Dial("tcp", c.config.ServerAddress)
+func (a *Agency) createAgencySocket() error {
+	conn, err := net.Dial("tcp", a.config.ServerAddress)
 	if err != nil {
 		log.Criticalf(
 			"action: connect | result: fail | agency_id: %v | error: %v",
-			c.config.ID,
+			a.config.ID,
 			err,
 		)
 	}
-	c.transport = NewTransport(conn)
+	a.transport = NewTransport(conn)
 	return nil
 }
 
 
-func (c *Agency) handleSigtermSignal() {
-	log.Infof("action: SIGTERM signal received| result: in_progress | agency_id: %v", c.config.ID)
-	if c.transport.conn != nil {
-		c.transport.Close()
-		log.Infof("action: SIGTERM signal received| result: success | agency_id: %v", c.config.ID)
+func (a *Agency) handleSigtermSignal() {
+	log.Infof("action: SIGTERM signal received| result: in_progress | agency_id: %v", a.config.ID)
+	if a.transport.conn != nil {
+		a.transport.Close()
+		log.Infof("action: SIGTERM signal received| result: success | agency_id: %v", a.config.ID)
 	}
 }
 
 // StartAgencyLoop Send messages to the Agency until some time threshold is met
-func (c *Agency) StartAgencyLoop() {
+func (a *Agency) StartAgencyLoop() {
 	signalChannel := make(chan os.Signal, 2)
     signal.Notify(signalChannel, syscall.SIGTERM)
     go func() {
         <-signalChannel
-        c.handleSigtermSignal()
+        a.handleSigtermSignal()
 				close(signalChannel)
     }()
 
 	bet := getBetFromEnvironment()
 	betMessage := bet.Serialize()
-	c.createAgencySocket()
+	a.createAgencySocket()
 
-	err := c.transport.SendAll(betMessage)
+	err := a.transport.SendAll(betMessage)
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | agency_id: %v | error: %v",
-			c.config.ID,
+			a.config.ID,
 			err,
 		)
-		c.transport.Close()
+		a.transport.Close()
 	}
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
-	err = c.transport.ReceiveAll(ackMessage)
+	err = a.transport.ReceiveAll(ackMessage)
 	if err != nil {
 		log.Errorf("action: receive_ack | result: fail | agency_id: %v | error: %v",
-			c.config.ID,
+			a.config.ID,
 			err,
 		)
-		c.transport.Close()
+		a.transport.Close()
 	}
 
 	if ackMessage[0] == ACK_MESSAGE_TYPE && ackMessage[3] == ACK_OK {
@@ -106,7 +106,8 @@ func (c *Agency) StartAgencyLoop() {
 		)
 	}
 
-	c.transport.Close()
+	a.transport.Close()
+	log.Infof("action: close_connection | result: success | agency_id: %v", a.config.ID)
 }
 
 
