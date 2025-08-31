@@ -27,10 +27,11 @@ class Server:
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
         while True:
             agency_sock = self.__accept_new_connection()
-            self._active_agencies_connections.append(agency_sock)
-            self.__handle_agency_connection(agency_sock)
+            transport = Transport(agency_sock)
+            self._active_agencies_connections.append(transport)
+            self.__handle_agency_connection(transport)
 
-    def __handle_agency_connection(self, agency_sock):
+    def __handle_agency_connection(self, transport):
         """
         Read message from a specific agency socket and closes the socket
 
@@ -38,19 +39,20 @@ class Server:
         agency socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            transport = Transport(agency_sock)
+            # Receive message from agency
             bet = transport.receive_menssage()
+            logging.info(f'action: receive_message | result: success | ip: {transport.addr} | msg: {bet}')
+            # Store bet information
             store_bets([bet])
             # Send ACK to agency
             transport.send_ack()
-            # logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            # Log bet storage
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
-            agency_sock.close()
-            self._active_agencies_connections.remove(agency_sock)
+            transport.close()
+            self._active_agencies_connections.remove(transport)
 
     def __accept_new_connection(self):
         """
@@ -68,11 +70,10 @@ class Server:
     
     def __handle_sigterm_signal(self, signum, frame):
         logging.info('action: SIGTERM signal received | result: in_progress')
-        for agency_socket in self._active_agencies_connections:
-            agency_socket.close()
-            logging.info('action: SIGTERM signal received | result: success | agency socket: {agency_socket}')
+        for transport in self._active_agencies_connections:
+            transport.close()
+            logging.info('action: SIGTERM signal received | result: success | agency socket: {transport._agency_socket}')
         self._server_socket.close()            
         logging.info('action: SIGTERM signal received | result: success | server socket: {self._server_socket}')
-        sys.exit(0)
 
         
