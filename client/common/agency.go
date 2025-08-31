@@ -92,7 +92,7 @@ func (c *Agency) StartAgencyLoop() {
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
 	err = c.transport.ReceiveAll(ackMessage)
 	if err != nil {
-		c.log.Errorf("action: receive_ack | result: fail | agency_id: %v | error: %v",
+		log.Errorf("action: receive_ack | result: fail | agency_id: %v | error: %v",
 			c.config.ID,
 			err,
 		)
