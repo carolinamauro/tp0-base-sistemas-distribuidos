@@ -75,9 +75,9 @@ func (a *Agency) StartAgencyLoop() {
 				close(signalChannel)
     }()
 
-	bet, err := getBetFromEnvironment()
-	if err != nil {
-		log.Criticalf("action: load_env | result: fail | agency_id: %v | error: %v", a.config.ID, err)
+	bet := getBetFromEnvironment()
+	if bet == nil {
+		log.Criticalf("action: load_env | result: fail | agency_id: %v", a.config.ID)
 		return
 	}
 
