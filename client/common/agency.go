@@ -81,6 +81,8 @@ func (a *Agency) StartAgencyLoop() {
 	betMessage := bet.Serialize()
 	a.createAgencySocket()
 
+	time.Sleep(a.config.LoopPeriod * time.Second)
+	
 	err := a.transport.SendAll(betMessage)
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | agency_id: %v | error: %v",
