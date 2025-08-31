@@ -53,6 +53,7 @@ func (a *Agency) createAgencySocket() error {
 			a.config.ID,
 			err,
 		)
+		return err
 	}
 	a.transport = NewTransport(conn)
 	return nil
@@ -74,7 +75,12 @@ func (a *Agency) StartAgencyLoop() {
 				close(signalChannel)
     }()
 
-	bet := getBetFromEnvironment()
+	bet, err := getBetFromEnvironment()
+	if err != nil {
+		log.Criticalf("action: load_env | result: fail | agency_id: %v | error: %v", a.config.ID, err)
+		return
+	}
+
 	betMessage := bet.Serialize()
 	a.createAgencySocket()
 
@@ -84,6 +90,8 @@ func (a *Agency) StartAgencyLoop() {
 			a.config.ID,
 			err,
 		)
+		a.CloseConnection()
+		return
 	}
 
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
