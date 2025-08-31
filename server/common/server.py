@@ -42,10 +42,10 @@ class Server:
             transport = Transport(agency_sock)
             bet = transport.receive_menssage()
             store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
             # Send ACK to agency
             transport.send_ack()
             # logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
