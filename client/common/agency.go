@@ -60,11 +60,8 @@ func (a *Agency) createAgencySocket() error {
 
 
 func (a *Agency) handleSigtermSignal() {
-	log.Infof("action: SIGTERM signal received| result: in_progress | agency_id: %v", a.config.ID)
-	if a.transport.conn != nil {
-		a.transport.Close()
-		log.Infof("action: SIGTERM signal received| result: success | agency_id: %v", a.config.ID)
-	}
+	log.Infof("action: SIGTERM signal received | result: in_progress | agency_id: %v", a.config.ID)
+	a.CloseConnection()
 }
 
 // StartAgencyLoop Send messages to the Agency until some time threshold is met
@@ -83,7 +80,7 @@ func (a *Agency) StartAgencyLoop() {
 
 	err := a.transport.SendAll(betMessage)
 	if err != nil {
-		log.Errorf("action: send_bet | result: fail | agency_id: %v | error: %v",
+		log.Criticalf("action: send_bet | result: fail | agency_id: %v | error: %v",
 			a.config.ID,
 			err,
 		)
@@ -91,8 +88,9 @@ func (a *Agency) StartAgencyLoop() {
 
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
 	err = a.transport.ReceiveAll(ackMessage)
+	
 	if err != nil {
-		log.Errorf("action: receive_ack | result: fail | agency_id: %v | error: %v",
+		log.Criticalf("action: receive_ack | result: fail | agency_id: %v | error: %v",
 			a.config.ID,
 			err,
 		)
@@ -103,10 +101,15 @@ func (a *Agency) StartAgencyLoop() {
 		)
 	}
 
-	a.transport.Close()
-	log.Infof("action: close_connection | result: success | agency_id: %v", a.config.ID)
+	a.CloseConnection()
 
-	time.Sleep(a.config.LoopPeriod)
+}
+
+func (a *Agency) CloseConnection() {
+	if a.transport != nil {
+		a.transport.Close()
+		log.Infof("action: close_connection | result: success | agency_id: %v", a.config.ID)
+	}
 }
 
 
