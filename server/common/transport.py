@@ -55,5 +55,5 @@ class Transport:
     self._agency_socket.close()
     
   def addr(self):
-    return self._agency_socket.getsockname()[0]
+    return self._agency_socket.getpeername()[0]
   

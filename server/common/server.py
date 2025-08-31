@@ -44,10 +44,10 @@ class Server:
             logging.info(f'action: receive_message | result: success | ip: {transport.addr()} | msg: {bet.agency}, {bet.first_name}, {bet.last_name}, {bet.document}, {bet.birthdate}, {bet.number}')
             # Store bet information
             store_bets([bet])
-            # Send ACK to agency
-            transport.send_ack()
             # Log bet storage
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
+             # Send ACK to agency
+            transport.send_ack()
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
