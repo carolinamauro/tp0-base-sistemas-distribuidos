@@ -4,7 +4,7 @@ file_name=$1
 clients_amount=$2
 
 if [ -z "$file_name" ]; then
-    file_name="docker-compose-dev.yml"
+    file_name="docker-compose-dev.yaml"
 fi
 
 if [ -z "$clients_amount" ]; then
