@@ -12,6 +12,7 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._active_agencies_connections = []
+        self._listening = True
 
     def run(self):
         """
@@ -25,7 +26,7 @@ class Server:
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
-        while True:
+        while self._listening:
             agency_sock = self.__accept_new_connection()
             transport = Transport(agency_sock)
             self._active_agencies_connections.append(transport)
@@ -75,5 +76,6 @@ class Server:
             logging.info('action: SIGTERM signal received | result: success | agency socket: {transport._agency_socket}')
         self._server_socket.close()            
         logging.info('action: SIGTERM signal received | result: success | server socket: {self._server_socket}')
+        self._listening = False
 
         
