@@ -4,17 +4,17 @@ import (
 	"net"
 )
 
-type TransportMessage struct{
+type Transport struct{
 	conn 	net.Conn
 }
 
-func NewTransportMessage(conn net.Conn) *TransportMessage {
-	return &TransportMessage{
+func NewTransport(conn net.Conn) *Transport {
+	return &Transport{
 		conn: conn,
 	}
 }
 
-func (tm *TransportMessage) SendAll(message []byte) error {
+func (tm *Transport) SendAll(message []byte) error {
 	totalSent := 0
 	messageLength := len(message)
 	
@@ -28,7 +28,7 @@ func (tm *TransportMessage) SendAll(message []byte) error {
 	return nil
 }
 
-func (tm *TransportMessage) ReceiveAll(buffer []byte) error {
+func (tm *Transport) ReceiveAll(buffer []byte) error {
 	totalReceived := 0
 	bufferLength := len(buffer)
 
@@ -42,6 +42,6 @@ func (tm *TransportMessage) ReceiveAll(buffer []byte) error {
 	return nil
 }
 
-func (tm *TransportMessage) Close() error {
+func (tm *Transport) Close() error {
 	return tm.conn.Close()
 }

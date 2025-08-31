@@ -31,7 +31,7 @@ type AgencyConfig struct {
 // Agency Entity that encapsulates how
 type Agency struct {
 	config 							AgencyConfig
-	transportMessage   	TransportMessage
+	transport   	Transport
 }
 
 // NewAgency Initializes a new Agency receiving the configuration
@@ -55,7 +55,7 @@ func (c *Agency) createAgencySocket() error {
 			err,
 		)
 	}
-	c.transportMessage = NewTransportMessage(conn)
+	c.transport = NewTransport(conn)
 	return nil
 }
 
@@ -80,7 +80,7 @@ func (c *Agency) StartAgencyLoop() {
 	bet := getBetFromEnvironment()
 	betMessage := bet.Serialize()
 	c.createAgencySocket()
-	err := c.transportMessage.SendAll(betMessage)
+	err := c.transport.SendAll(betMessage)
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | agency_id: %v | error: %v",
 			c.config.ID,
@@ -89,7 +89,7 @@ func (c *Agency) StartAgencyLoop() {
 		// TODO: cerrar conexion
 	}
 	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
-	err = c.transportMessage.ReceiveAll(ackMessage)
+	err = c.Transport.ReceiveAll(ackMessage)
 	if err != nil {
 		// TODO: cerrar conexion
 		return
@@ -101,7 +101,7 @@ func (c *Agency) StartAgencyLoop() {
 		)
 	}
 	
-	err = c.transportMessage.Close()
+	err = c.transport.Close()
 	
 }
 
