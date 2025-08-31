@@ -14,16 +14,18 @@ var log = logging.MustGetLogger("log")
 
 // AgencyConfig Configuration used by the agency client
 type AgencyConfig struct {
-	ID            string
-	ServerAddress string
-	LoopAmount    int
-	LoopPeriod    time.Duration
+	ID            	string
+	ServerAddress 	string
+	LoopAmount    	int
+	LoopPeriod    	time.Duration
+	BatchMaxAmount 	int       
 }
 
 // Agency Entity that encapsulates how
 type Agency struct {
 	config 							AgencyConfig
 	transport   				*Transport
+	running           	bool
 }
 
 // NewAgency Initializes a new Agency receiving the configuration
@@ -68,38 +70,35 @@ func (a *Agency) StartAgencyLoop() {
 				close(signalChannel)
     }()
 
-	bet := getBetFromEnvironment()
-	if bet == nil {
-		log.Criticalf("action: load_env | result: fail | agency_id: %v", a.config.ID)
-		return
-	}
+	betReader := NewBetReader(a.config.BatchMaxAmount)
 
-	betMessage := bet.Serialize()
 	a.createAgencySocket()
-
-	err := a.transport.SendAll(betMessage)
-	if err != nil {
-		log.Criticalf("action: send_bet | result: fail | agency_id: %v | error: %v",
-			a.config.ID,
-			err,
-		)
-		a.CloseConnection()
-		return
-	}
-
-	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
-	err = a.transport.ReceiveAll(ackMessage)
 	
-	if err != nil {
-		log.Criticalf("action: receive_ack | result: fail | agency_id: %v | error: %v",
-			a.config.ID,
-			err,
-		)
-	} else if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK { 
-		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-			bet.clientDNI,
-			bet.number,
-		)
+	while a.running && !betReader.allBetsRead {
+		betChunk := betReader.getChunk()
+
+		if err := a.transport.SendAll(betChunk); err != nil {
+			log.Criticalf("action: send_chunk | result: fail | agency_id: %v | error: %v",
+				a.config.ID,
+				err,
+			)
+			a.CloseConnection()
+			return
+		}
+
+		ackMessage := make([]byte, SIZE_ACK_MESSAGE)
+		if err := a.transport.ReceiveAll(ackMessage); err != nil {
+			log.Criticalf("action: recv_ack | result: fail | agency_id: %v | error: %v",
+				a.config.ID, err)
+			return
+		}
+
+		if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK {
+			log.Infof("action: apuesta_enviada | result: success | agency_id: %v",
+				a.config.ID, 
+			)
+		}
+		time.Sleep(a.config.LoopPeriod)
 	}
 
 	a.CloseConnection()
@@ -108,36 +107,9 @@ func (a *Agency) StartAgencyLoop() {
 
 // CloseConnection closes the Agency connection gracefully
 func (a *Agency) CloseConnection() {
+	a.running = false
 	if a.transport != nil {
 		a.transport.Close()
 		log.Infof("action: close_connection | result: success | agency_id: %v", a.config.ID)
 	}
-}
-
-// getBetFromEnvironment retrieves bet information from environment variables
-func getBetFromEnvironment() *Bet {
-	agencyId := os.Getenv("CLI_ID")
-	clientName := os.Getenv("NOMBRE")
-	clientSurname := os.Getenv("APELLIDO")
-	clientDNI := os.Getenv("DNI")
-	clientBirthDate := os.Getenv("NACIMIENTO")
-	clientBetNumber := os.Getenv("NUMERO")
-
-	agencyIdUint64, err := strconv.ParseUint(agencyId, 10, 32)
-	if err != nil {
-		log.Criticalf("action: convert_agency_id | result: fail | agency_id: %v | error: %v",
-			agencyId, err)
-			return nil
-	}
-
-	clientBetNumberUint64, err := strconv.ParseUint(clientBetNumber, 10, 32)
-	if err != nil {
-		log.Criticalf("action: convert_bet_number | result: fail | bet_number: %v | error: %v",
-			clientBetNumber, err)
-			return nil
-	}
-
-
-	bet := NewBet(uint32(agencyIdUint64), uint32(clientBetNumberUint64), clientName, clientSurname, clientDNI, clientBirthDate)
-	return bet
 }
