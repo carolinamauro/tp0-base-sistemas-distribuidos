@@ -138,6 +138,6 @@ func getBetFromEnvironment() *Bet {
 	}
 
 
-	bet := NewBet(uint32(agencyIdUint64), uint32(clientBetNumberUint64), clientName, clientSurname, clientDNI, clientBirthDate)
+	bet := NewBet(uint16(agencyIdUint64), uint16(clientBetNumberUint64), clientName, clientSurname, clientDNI, clientBirthDate)
 	return bet
 }
