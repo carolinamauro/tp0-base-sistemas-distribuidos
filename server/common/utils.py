@@ -32,6 +32,22 @@ class Bet:
         self.number = int(number)
         
     def deserialize(bytes: str):
+        """
+        Deserializes a Bet object from a byte array.
+        The byte array must be formatted as follows:
+        [type (1 byte), length (1 byte), value (length bytes)]*
+        where type is one of the following:
+        - AGENCY_ID_TYPE (0x10): agency id (integer)
+        - CLIENT_NAME_TYPE (0x11): client first name (string)
+        - CLIENT_SURNAME_TYPE (0x12): client last name (string)
+        - CLIENT_DNI_TYPE (0x13): client document (string)  
+        - CLIENT_BIRTHDATE_TYPE (0x14): client birthdate (string, format 'YYYY-MM-DD')
+        - BET_NUMBER_TYPE (0x15): bet number (integer)
+        and length is the length of the value in bytes.
+        
+        Raises ValueError if the byte array is not formatted correctly or
+        if any of the required fields are missing.
+        """
         n = 0
         bet = {}
         while n < len(bytes):

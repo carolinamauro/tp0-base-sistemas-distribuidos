@@ -4,16 +4,21 @@ import (
 	"net"
 )
 
+// Transport struct that encapsulates the connection
 type Transport struct{
 	conn 	net.Conn
 }
 
+// NewTransport Initializes a new Transport receiving the connection
+// as a parameter
 func NewTransport(conn net.Conn) *Transport {
 	return &Transport{
 		conn: conn,
 	}
 }
 
+// SendAll Sends all the bytes of the message
+// Returns an error in case of failure
 func (tm *Transport) SendAll(message []byte) error {
 	totalSent := 0
 	messageLength := len(message)
@@ -28,6 +33,8 @@ func (tm *Transport) SendAll(message []byte) error {
 	return nil
 }
 
+// ReceiveAll Receives all the bytes of the message
+// Returns an error in case of failure
 func (tm *Transport) ReceiveAll(buffer []byte) error {
 	totalReceived := 0
 	bufferLength := len(buffer)
@@ -42,6 +49,7 @@ func (tm *Transport) ReceiveAll(buffer []byte) error {
 	return nil
 }
 
+// Close closes the connection
 func (tm *Transport) Close() error {
 	return tm.conn.Close()
 }

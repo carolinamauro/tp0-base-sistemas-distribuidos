@@ -19,6 +19,7 @@ const (
 	BET_NUMBER_TYPE = 0x15
 )
 
+// Bet struct that encapsulates the bet information
 type Bet struct {
 	agencyId			 			uint32
 	number        			uint32    
@@ -28,6 +29,7 @@ type Bet struct {
 	clientBirthDate     string 
 }
 
+// NewBet Initializes a new Bet with the given parameters
 func NewBet(agencyId uint32, number uint32, clientName string, clientSurname string, clientDNI string, clientBirthDate string) *Bet {
 	return &Bet{
 		agencyId:       	agencyId,
@@ -39,23 +41,29 @@ func NewBet(agencyId uint32, number uint32, clientName string, clientSurname str
 	}
 }
 
+// Serialize serializes the Bet struct into a byte slice according to the specified format
 func uint32ToBytes(num uint32) []byte {
 	bytes := make([]byte, SIZE_UINT32)
 	binary.BigEndian.PutUint32(bytes, num)
 	return bytes
 }
 
+// uint16ToBytes converts a uint16 to a byte slice in big-endian order
 func uint16ToBytes(num uint16) []byte {
 	bytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(bytes, num)
 	return bytes
 }
 
+// addBetField appends a field to the serialized bet byte slice
 func addBetField(serializedBet *[]byte, fieldType uint8, fieldValue []byte) {
 	*serializedBet = append(*serializedBet, fieldType, uint8(len(fieldValue)))
 	*serializedBet = append(*serializedBet, fieldValue...)
 }
 
+// Serialize serializes the Bet struct into a byte slice according to the specified format
+// The format includes the message type, total size, and each field with its type, length
+// and value
 func (bet *Bet) Serialize() []byte {
 	var serializedBet []byte
 

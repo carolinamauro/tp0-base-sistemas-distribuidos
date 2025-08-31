@@ -58,7 +58,7 @@ func (a *Agency) createAgencySocket() error {
 	return nil
 }
 
-
+// handleSigtermSignal Handles the SIGTERM signal by closing the connection gracefully
 func (a *Agency) handleSigtermSignal() {
 	log.Infof("action: SIGTERM signal received | result: in_progress | agency_id: %v", a.config.ID)
 	a.CloseConnection()
@@ -105,6 +105,7 @@ func (a *Agency) StartAgencyLoop() {
 
 }
 
+// CloseConnection closes the Agency connection gracefully
 func (a *Agency) CloseConnection() {
 	if a.transport != nil {
 		a.transport.Close()
@@ -112,7 +113,7 @@ func (a *Agency) CloseConnection() {
 	}
 }
 
-
+// getBetFromEnvironment retrieves bet information from environment variables
 func getBetFromEnvironment() *Bet {
 	agencyId := os.Getenv("CLI_ID")
 	clientName := os.Getenv("NOMBRE")
