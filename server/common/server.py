@@ -10,6 +10,7 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._active_client_connections = []
+        self._listening = True
 
     def run(self):
         """
@@ -23,10 +24,17 @@ class Server:
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
-        while True:
-            client_sock = self.__accept_new_connection()
-            self._active_client_connections.append(client_sock)
-            self.__handle_client_connection(client_sock)
+        while self._listening:
+            try:
+                client_sock = self.__accept_new_connection()
+                self._active_client_connections.append(client_sock)
+                self.__handle_client_connection(client_sock)
+            except OSError as e:
+                if self._listening:
+                    logging.error(f"action: accept_connections | result: fail | error: {e}")
+                else:
+                    logging.info("action: server_shutdown | result: in_progress")
+                break
 
     def __handle_client_connection(self, client_sock):
         """
@@ -63,12 +71,14 @@ class Server:
         return c
     
     def __handle_sigterm_signal(self, signum, frame):
+        self._listening = False
         logging.info('action: SIGTERM signal received | result: in_progress')
         for client_socket in self._active_client_connections:
             client_socket.close()
             logging.info('action: SIGTERM signal received | result: success | client socket: {client_socket}')
+        socket_addr = self._server_socket.getsockname()[0]
         self._server_socket.close()            
-        logging.info('action: SIGTERM signal received | result: success | server socket: {self._server_socket}')
-        sys.exit(0)
+        logging.info('action: SIGTERM signal received | result: success | server socket: {socket_addr}')
+        
 
         

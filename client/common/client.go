@@ -23,8 +23,9 @@ type ClientConfig struct {
 
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
+	config 	ClientConfig
+	conn   	net.Conn
+	running bool
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -37,7 +38,7 @@ func NewClient(config ClientConfig) *Client {
 }
 
 // CreateClientSocket Initializes client socket. In case of
-// failure, error is printed in stdout/stderr and exit 1
+// failure, error is printed in stdout/stderr
 // is returned
 func (c *Client) createClientSocket() error {
 	conn, err := net.Dial("tcp", c.config.ServerAddress)
@@ -53,26 +54,31 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) handleSigtermSignal() {
-	log.Infof("action: SIGTERM signal received| result: in_progress | client_id: %v", c.config.ID)
+	log.Infof("action: SIGTERM signal received | result: in_progress | client_id: %v", c.config.ID)
+	c.running = false
+	// Close the connection if it is open
 	if c.conn != nil {
 		c.conn.Close()
+		log.Infof("action: SIGTERM signal received | result: success | client_id: %v", c.config.ID)
 	}
-	log.Infof("action: SIGTERM signal received| result: success | client_id: %v", c.config.ID)
 }
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
+	c.running = true
+
+	// Handle SIGTERM signal to close the connection gracefully
 	signalChannel := make(chan os.Signal, 2)
     signal.Notify(signalChannel, syscall.SIGTERM)
     go func() {
         <-signalChannel
         c.handleSigtermSignal()
-		os.Exit(0)
+				close(signalChannel)
     }()
 
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+	for msgID := 1; msgID <= c.config.LoopAmount && c.running; msgID++ {
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
 
