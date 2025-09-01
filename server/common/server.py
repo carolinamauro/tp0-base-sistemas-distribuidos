@@ -51,6 +51,8 @@ class Server:
             message = transport.receive_message_type()
             if message is None:
                 raise OSError("Connection closed by the other side")
+            if transport.is_last_chunk_message(message):
+                self.__handle_chunck_message(transport)
             if transport.is_chunk_message(message):
                 self.__handle_chunck_message(transport)
                 while True:
