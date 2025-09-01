@@ -49,11 +49,12 @@ class Server:
         try:
             # Receive message from agency
             message = transport.receive_message_type()
+            logging.info(f"action: receive_message | result: in_progress | message_type: {message}")
             if message is None:
                 raise OSError("Connection closed by the other side")
-            if transport.is_last_chunk_message(message):
+            elif transport.is_last_chunk_message(message):
                 self.__handle_chunck_message(transport)
-            if transport.is_chunk_message(message):
+            elif transport.is_chunk_message(message):
                 self.__handle_chunck_message(transport)
                 while True:
                     message = transport.receive_message_type()

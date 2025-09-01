@@ -75,13 +75,16 @@ func (a *Agency) StartAgencyLoop() {
 	
 	for a.running && !betReader.allBetsRead {
 		betChunk := betReader.getChunk(a.config.ID)
+		
 		if len(betChunk) == 0 {
 			break
 		}
+
 		messageType := MESSAGE_TYPE_CHUNK
 		if betReader.allBetsRead {
 			messageType = MESSAGE_TYPE_LAST_CHUNK
 		}
+
 		if err := a.transport.SendMessage(messageType, betChunk); err != nil {
 			log.Criticalf("action: send_chunk | result: fail | agency_id: %v | error: %v",
 				a.config.ID,
