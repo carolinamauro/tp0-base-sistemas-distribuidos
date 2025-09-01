@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"os"
 	"io"
+	"strconv"
 )
 
 type BetReader struct {
@@ -21,7 +22,7 @@ func NewBetReader(batchMaxAmount int) *BetReader {
 		return nil
 	}
 	return &BetReader{
-		batchMaxAmount: batchAMaxMount,
+		batchMaxAmount: batchMaxAmount,
 		file:          file,
 		fileReader:    csv.NewReader(file),
 		allBetsRead:   false,
@@ -36,9 +37,8 @@ func parseToUint16(value string) uint16 {
 	return uint16(parsedValue)
 }
 
-func (br *BetReader) getChunk(agencyId uint32) []byte {
+func (br *BetReader) getChunk(agencyId string) []byte {
 	var chunk []byte
-	var betsInChunk [][]string
 	betsRead := 0
 
 	if br.unsentBet != nil {
@@ -48,7 +48,7 @@ func (br *BetReader) getChunk(agencyId uint32) []byte {
 		betsRead++
 	}
 
-	for betsRead; betsRead < br.batchMaxAmount && !br.allBetsRead; betsRead++ {
+	for betsRead < br.batchMaxAmount && !br.allBetsRead {
 		record, err := br.fileReader.Read()
 		if err == io.EOF {
 			br.allBetsRead = true
@@ -57,13 +57,14 @@ func (br *BetReader) getChunk(agencyId uint32) []byte {
 		if err != nil {
 			continue
 		}
-		bet := NewBet(agencyId, parseToUint16(record[4]), record[0], record[1], record[2], record[3])
+		bet := NewBet(parseToUint16(agencyId), parseToUint16(record[4]), record[0], record[1], record[2], record[3])
 		serializedBet := bet.Serialize()
 		if len(chunk)+len(serializedBet) > MAX_CHUNK_SIZE {
 			br.unsentBet = bet
 			break
 		}
 		chunk = append(chunk, bet.Serialize()...)
+		betsRead++
 	}
 
 	return chunk

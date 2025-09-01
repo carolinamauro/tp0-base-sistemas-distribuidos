@@ -67,7 +67,7 @@ class Server:
             else:
                 raise OSError("Invalid message type received")
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
             transport.close()
             self._active_agencies_connections.remove(transport)

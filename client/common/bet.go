@@ -1,9 +1,5 @@
 package common
 
-import (
-	"encoding/binary"
-)
-
 // Bet struct that encapsulates the bet information
 type Bet struct {
 	agencyId			 			uint16
@@ -24,13 +20,6 @@ func NewBet(agencyId uint16, number uint16, clientName string, clientSurname str
 		clientDNI:    		clientDNI,
 		clientBirthDate:  clientBirthDate,
 	}
-}
-
-// uint16ToBytes converts a uint16 to a byte slice in big-endian order
-func uint16ToBytes(num uint16) []byte {
-	bytes := make([]byte, SIZE_UINT16)
-	binary.BigEndian.PutUint16(bytes, num)
-	return bytes
 }
 
 // addBetField appends a field to the serialized bet byte slice

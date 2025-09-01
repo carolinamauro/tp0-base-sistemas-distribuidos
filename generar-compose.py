@@ -34,7 +34,7 @@ CLIENT_TEMPLATE = """\
     depends_on:
       - server
     volumes:
-      - ./data/dataset.csv/agency-{id}.csv:/agency.csv
+      - ./.data/dataset/agency-{id}.csv:/agency.csv
       - ./client/config.yaml:/config.yaml
 """
 

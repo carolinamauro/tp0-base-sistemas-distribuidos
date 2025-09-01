@@ -21,4 +21,5 @@ const (
 	BET_NUMBER_TYPE = 0x15
 
 	BETS_FILE_PATH = "./agency.csv"
+	MAX_CHUNK_SIZE = 8192 // 8 KB
 )

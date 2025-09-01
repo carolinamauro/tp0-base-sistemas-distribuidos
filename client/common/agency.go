@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 	"github.com/op/go-logging"
-	"strconv"
 )
 
 var log = logging.MustGetLogger("log")
@@ -70,12 +69,15 @@ func (a *Agency) StartAgencyLoop() {
 				close(signalChannel)
     }()
 
+	a.running = true
 	betReader := NewBetReader(a.config.BatchMaxAmount)
-
 	a.createAgencySocket()
 	
 	for a.running && !betReader.allBetsRead {
-		betChunk := betReader.getChunk()
+		betChunk := betReader.getChunk(a.config.ID)
+		if len(betChunk) == 0 {
+			break
+		}
 		messageType := MESSAGE_TYPE_CHUNK
 		if betReader.allBetsRead {
 			messageType = MESSAGE_TYPE_LAST_CHUNK

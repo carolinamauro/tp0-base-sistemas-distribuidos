@@ -18,8 +18,10 @@ func NewTransport(conn net.Conn) *Transport {
 }
 
 func (tm *Transport) SendMessage(messageType uint8, message []byte) error {
-	messageToSend := make([]byte, 0, SIZE_MESSAGE_TYPE+len(message))
+	totalSize := uint16ToBytes(uint16(len(message)))
+	messageToSend := make([]byte, 0, len(message)+SIZE_MESSAGE_TYPE)
 	messageToSend = append(messageToSend, messageType)
+	messageToSend = append(messageToSend, totalSize...)
 	messageToSend = append(messageToSend, message...)
 	return tm.SendAll(messageToSend)
 }
