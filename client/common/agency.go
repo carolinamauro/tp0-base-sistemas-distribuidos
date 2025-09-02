@@ -98,6 +98,7 @@ func (a *Agency) StartAgencyLoop() {
 		if err := a.transport.ReceiveAll(ackMessage); err != nil {
 			log.Criticalf("action: recv_ack | result: fail | agency_id: %v | error: %v",
 				a.config.ID, err)
+			a.CloseConnection()
 			return
 		}
 
