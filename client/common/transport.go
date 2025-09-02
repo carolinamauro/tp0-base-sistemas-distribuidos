@@ -17,6 +17,8 @@ func NewTransport(conn net.Conn) *Transport {
 	}
 }
 
+// SendMessage Sends a message with the given type and content
+// Returns an error in case of failure
 func (tm *Transport) SendMessage(messageType uint8, message []byte) error {
 	totalSize := uint16ToBytes(uint16(len(message)))
 	messageToSend := make([]byte, 0, len(message)+SIZE_MESSAGE_TYPE)

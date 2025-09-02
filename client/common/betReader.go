@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// BetReader struct that reads bets from a CSV file and provides them in chunks
 type BetReader struct {
 	batchMaxAmount 	int
 	file 						*os.File
@@ -16,6 +17,7 @@ type BetReader struct {
 
 }
 
+// NewBetReader Initializes a new BetReader with the given batch size and opens the CSV file
 func NewBetReader(batchMaxAmount int) *BetReader {
 	file, err := os.Open(BETS_FILE_PATH)
 	if err != nil {
@@ -29,14 +31,9 @@ func NewBetReader(batchMaxAmount int) *BetReader {
 	}
 }
 
-func parseToUint16(value string) uint16 {
-	parsedValue, err := strconv.ParseUint(value, 10, 16)
-	if err != nil {
-		return 0
-	}
-	return uint16(parsedValue)
-}
-
+// getChunk reads bets from the CSV file and returns a serialized chunk of bets
+// It reads up to batchMaxAmount bets or until the chunk size limit is reached
+// If a bet cannot fit in the current chunk, it is stored for the next call
 func (br *BetReader) getChunk(agencyId string) []byte {
 	var chunk []byte
 	betsRead := 0

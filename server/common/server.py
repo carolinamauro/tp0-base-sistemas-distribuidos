@@ -42,8 +42,6 @@ class Server:
     def __handle_agency_connection(self, transport):
         """
         Read message from a specific agency socket and closes the socket
-        
-        
 
         If a problem arises in the communication with the agency, the
         agency socket will also be closed
