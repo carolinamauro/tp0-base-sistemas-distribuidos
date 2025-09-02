@@ -77,7 +77,6 @@ class Server:
                 logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
                 try:
                     transport.send_ack()
-                    logging.info("action: send_ack | result: success")
                 except Exception as e:
                     raise OSError(f"send_ack: {e}")
 
@@ -108,8 +107,7 @@ class Server:
                 logging.error(f"action: send_lottery_result | result: fail | agency socket: {transport.addr()} | error: {e}")
             finally:
                 self.__close_connection(transport)
-        self._active_agencies_connections = []
-        self._finished_agencies = 0
+
               
     def __accept_new_connection(self):
         """
@@ -128,7 +126,8 @@ class Server:
     def __close_connection(self, transport):
         logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {transport.addr()}")
         transport.close()
-        self._active_agencies_connections.remove(transport)
+        self._active_agencies_connections = [t for t in self._active_agencies_connections if t.agency_id != transport.agency_id]
+        self._finished_agencies -= 1
     
     def __handle_sigterm_signal(self, signum, frame):
         self._listening = False
