@@ -73,6 +73,8 @@ func (a *Agency) StartAgencyLoop() {
 	betReader := NewBetReader(a.config.BatchMaxAmount)
 	a.createAgencySocket()
 	
+	a.sendAgencyID()
+
 	for a.running && !betReader.allBetsRead {
 		betChunk := betReader.getChunk(a.config.ID)
 		
@@ -110,6 +112,7 @@ func (a *Agency) StartAgencyLoop() {
 		time.Sleep(a.config.LoopPeriod)
 	}
 
+	a.getLotteryResult()
 	a.CloseConnection()
 
 }
@@ -121,4 +124,33 @@ func (a *Agency) CloseConnection() {
 		a.transport.Close()
 		log.Infof("action: close_connection | result: success | agency_id: %v", a.config.ID)
 	}
+}
+
+func (a *Agency) getLotteryResult() {
+
+	lotteryMessage := a.transport.ReceiveAll()
+	if lotteryMessage == nil {
+		log.Criticalf("action: recv_lottery | result: fail | agency_id: %v",
+			a.config.ID)
+		a.CloseConnection()
+		return
+	}
+
+	if len(lotteryMessage) > 0 && lotteryMessage[0] == MESSAGE_TYPE_LOTTERY_RESULT { 
+		lotteryWinners := NewLotteryWinners()
+		lotteryWinners.Deserialize(lotteryMessage[3:])
+		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", lotteryWinners.GetWinnersAmount())
+	}
+}
+
+func (a *Agency) sendAgencyID() error {
+	agencyIDBytes := []byte(a.config.ID)
+	if err := a.transport.SendMessage(MESSAGE_TYPE_AGENCY_ID, agencyIDBytes); err != nil {
+		log.Criticalf("action: send_agency_id | result: fail | agency_id: %v | error: %v",
+			a.config.ID,
+			err,
+		)
+		return err
+	}
+	return nil
 }

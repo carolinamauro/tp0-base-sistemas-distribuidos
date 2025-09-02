@@ -72,6 +72,17 @@ class Bet:
                 pass
             
         return Bet(bet["agency"], bet["first_name"], bet["last_name"], bet["document"], bet["birthdate"], bet["number"])
+    
+    def serialize_dni_field(self) -> bytes:
+        """
+        Serializes the document field of the Bet object into a byte array.
+        The byte array is formatted as follows:
+        [type (1 byte), length (1 byte), value (length bytes)]
+        where type is CLIENT_DNI_TYPE (0x13) and length is the length of the value in bytes.
+        """
+        dni_bytes = self.document.encode('utf-8')
+
+        return bytes([CLIENT_DNI_TYPE]) + len(dni_bytes).to_bytes(2, "big") + dni_bytes
         
         
 

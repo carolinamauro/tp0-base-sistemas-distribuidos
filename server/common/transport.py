@@ -8,12 +8,15 @@ MESSAGE_TYPE_SIZE = 1
 MESSAGE_TYPE_BET = 1
 MESSAGE_TYPE_CHUNK = 2
 MESSAGE_TYPE_LAST_CHUNK = 3
+MESSAGE_TYPE_LOTTERY_RESULT = 3
+MESSAGE_TYPE_AGENCY_ID = 4
 MESSAGE_TYPE_ACK = 0xFF
 ACK_OK = 0x00
 
 class Transport:
   def __init__(self, agencySocket: socket):
     self._agency_socket = agencySocket
+    self.agency_id = None
    
   def __receive_all(self):
     """" 
@@ -29,6 +32,20 @@ class Transport:
     message_length = int.from_bytes(message_length_bytes, byteorder='big')
     while len(bytes) < message_length:
       data = self._agency_socket.recv(message_length - len(bytes))
+      if not data:
+        raise ConnectionError("Connection closed by the other side")
+      bytes += data
+    return bytes
+  
+  def __receive_exactly(self, n: int):
+    """
+    Receives exactly n bytes from the agency socket
+    
+    Returns ConnectionError in case of failure
+    """
+    bytes = b""
+    while len(bytes) < n:
+      data = self._agency_socket.recv(n - len(bytes))
       if not data:
         raise ConnectionError("Connection closed by the other side")
       bytes += data
@@ -53,6 +70,9 @@ class Transport:
   def is_last_chunk_message(self, message_type):
     return message_type == MESSAGE_TYPE_LAST_CHUNK
   
+  def is_agency_id_message(self, message_type):
+    return message_type == MESSAGE_TYPE_AGENCY_ID
+  
   def receive_chunk(self):
     """
     Receives a message from the agency socket
@@ -70,6 +90,17 @@ class Transport:
       data = data[3+length:]
       
     return bets
+  
+  def receive_agency_id(self):
+    """
+    Receives the agency ID from the agency socket
+    
+    Returns the agency ID as an integer in case of success.
+    Otherwise, it returns None.
+    """
+    data = self.__receive_exactly(3)
+    agency_id = int.from_bytes(data[2], byteorder='big')
+    self.agency_id = agency_id
   
   def __send_all(self, bytes: bytes):
     """
@@ -106,6 +137,14 @@ class Transport:
     message.extend(data)
     
     self.__send_all(message)
+    
+  def send_lottery_result(self, winners: list[Bet]):
+    message = bytearray()
+    for bet in winners:
+      serialized_dni = bet.serialize_dni_field()
+      message.extend(serialized_dni)
+      
+    self.send_message(MESSAGE_TYPE_LOTTERY_RESULT, message)
   
   def close(self):
     """
