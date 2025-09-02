@@ -53,7 +53,7 @@ class Server:
             self.__recv_bets(transport)
             self._finished_agencies += 1
             
-            if self._finished_agencies != self._listen_backlog:
+            if self._finished_agencies != len(self._active_agencies_connections):
                 return
             
             self._send_lottery_result_to_agencies()
