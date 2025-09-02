@@ -82,12 +82,7 @@ func (a *Agency) StartAgencyLoop() {
 			break
 		}
 
-		messageType := MESSAGE_TYPE_CHUNK
-		if betReader.allBetsRead {
-			messageType = MESSAGE_TYPE_LAST_CHUNK
-		}
-
-		if err := a.transport.SendMessage(messageType, betChunk); err != nil {
+		if err := a.transport.SendMessage(MESSAGE_TYPE_CHUNK, betChunk); err != nil {
 			log.Criticalf("action: send_chunk | result: fail | agency_id: %v | error: %v",
 				a.config.ID,
 				err,
@@ -111,6 +106,18 @@ func (a *Agency) StartAgencyLoop() {
 		}
 		time.Sleep(a.config.LoopPeriod)
 	}
+	
+	// Send end of chunks message
+	if err := a.transport.SendMessage(MESSAGE_TYPE_END_OF_CHUNKS, []byte{}); err != nil {
+		log.Criticalf("action: send_end_of_chunks | result: fail | agency_id: %v | error: %v",
+			a.config.ID,
+			err,
+		)
+		a.CloseConnection()
+		return
+	}
+
+	// Wait for lottery results
 
 	a.getLotteryResult()
 	a.CloseConnection()

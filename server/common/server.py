@@ -52,8 +52,8 @@ class Server:
         try:
             self.__recv_bets(transport)
             self._finished_agencies += 1
-            
-            if self._finished_agencies != len(self._active_agencies_connections):
+           
+            if self._finished_agencies != self._listen_backlog:
                 return
             
             self._send_lottery_result_to_agencies()
@@ -66,7 +66,7 @@ class Server:
             mtype = transport.receive_message_type()
             if mtype is None:
                 raise OSError("connection closed by peer")
-            if transport.is_chunk_message(mtype) or transport.is_last_chunk_message(mtype):
+            if transport.is_chunk_message(mtype):
                 try:
                     bets = transport.receive_chunk()
                 except Exception as e:
@@ -81,9 +81,9 @@ class Server:
                 except Exception as e:
                     raise OSError(f"send_ack: {e}")
 
-                if transport.is_last_chunk_message(mtype):
-                    logging.info(f"action: agency_finished | result: success | agency_id: {bets[0].agency}")
-                    break
+            elif transport.is_end_of_chunks_message(mtype):
+                logging.info(f"action: agency_finished | result: success | agency_id: {transport.agency_id}")
+                break
             elif transport.is_agency_id_message(mtype):
                 transport.receive_agency_id()
                 logging.info("action: receive_agency_id | result: success")

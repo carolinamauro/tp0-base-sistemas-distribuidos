@@ -7,7 +7,7 @@ MESSAGE_TYPE_SIZE = 1
 
 MESSAGE_TYPE_BET = 1
 MESSAGE_TYPE_CHUNK = 2
-MESSAGE_TYPE_LAST_CHUNK = 3
+MESSAGE_TYPE_END_OF_CHUNKS = 3
 MESSAGE_TYPE_AGENCY_ID = 4
 MESSAGE_TYPE_LOTTERY_RESULT = 5
 MESSAGE_TYPE_ACK = 0xFF
@@ -53,8 +53,8 @@ class Transport:
   def is_chunk_message(self, message_type):
     return message_type == MESSAGE_TYPE_CHUNK
 
-  def is_last_chunk_message(self, message_type):
-    return message_type == MESSAGE_TYPE_LAST_CHUNK
+  def is_end_of_chunks_message(self, message_type):
+    return message_type == MESSAGE_TYPE_END_OF_CHUNKS
   
   def is_agency_id_message(self, message_type):
     return message_type == MESSAGE_TYPE_AGENCY_ID
