@@ -10,8 +10,7 @@ const (
 	
 	SIZE_MESSAGE_TYPE	int = 1
 	SIZE_ACK_MESSAGE uint32 = 4
-	SIZE_SERIALIZED_BET_LENGHT int = 2
-	SIZE_UINT16 uint8 = 2
+	SIZE_UINT16 int = 2
 
 	AGENCY_ID_TYPE = 0x10
 	CLIENT_NAME_TYPE = 0x11
@@ -22,4 +21,5 @@ const (
 
 	BETS_FILE_PATH = "./agency.csv"
 	MAX_CHUNK_SIZE = 8192 // 8 KB
+	HEADER_SIZE = SIZE_MESSAGE_TYPE + SIZE_UINT16 // 1 + 2 = 3 bytes
 )

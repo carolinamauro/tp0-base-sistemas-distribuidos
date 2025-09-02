@@ -42,45 +42,43 @@ class Server:
     def __handle_agency_connection(self, transport):
         """
         Read message from a specific agency socket and closes the socket
+        
+        
 
         If a problem arises in the communication with the agency, the
         agency socket will also be closed
         """
         try:
-            # Receive message from agency
-            message = transport.receive_message_type()
-            logging.info(f"action: receive_message | result: in_progress | message_type: {message}")
-            if message is None:
-                raise OSError("Connection closed by the other side")
-            elif transport.is_last_chunk_message(message):
-                self.__handle_chunck_message(transport)
-            elif transport.is_chunk_message(message):
-                self.__handle_chunck_message(transport)
-                while True:
-                    message = transport.receive_message_type()
-                    if message is None:
-                        raise OSError("Connection closed by the other side")
-                    if transport.is_last_chunk_message(message):
-                        self.__handle_chunck_message(transport)
+            while True:
+                mtype = transport.receive_message_type()
+                if mtype is None:
+                    raise OSError("connection closed by peer")
+
+                if transport.is_chunk_message(mtype) or transport.is_last_chunk_message(mtype):
+                    try:
+                        bets = transport.receive_chunk()
+                    except Exception as e:
+                        logging.info(f"action: apuesta_recibida | result: fail | cantidad: {len(bets)}")
+                        raise OSError(f"receive_chunk: {e}")
+
+                    store_bets(bets)
+                    logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
+                    try:
+                        transport.send_ack()
+                    except Exception as e:
+                        raise OSError(f"send_ack: {e}")
+
+                    if transport.is_last_chunk_message(mtype):
                         break
-                    elif transport.is_chunk_message(message):
-                        self.__handle_chunck_message(transport)
-                    else:
-                        raise OSError("Invalid message type received")
-            else:
-                raise OSError("Invalid message type received")
+                else:
+                    raise OSError(f"invalid message type: {mtype}")
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
+            logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {transport.addr()}")
             transport.close()
             self._active_agencies_connections.remove(transport)
             
-    def __handle_chunck_message(self, transport):
-        bets = transport.receive_chunk()
-        store_bets(bets)
-        logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
-        transport.send_ack()
-
     def __accept_new_connection(self):
         """
         Accept new connections

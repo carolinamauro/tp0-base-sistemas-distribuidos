@@ -59,7 +59,7 @@ func (br *BetReader) getChunk(agencyId string) []byte {
 		}
 		bet := NewBet(parseToUint16(agencyId), parseToUint16(record[4]), record[0], record[1], record[2], record[3])
 		serializedBet := bet.Serialize()
-		if len(chunk)+len(serializedBet) > MAX_CHUNK_SIZE {
+		if len(chunk)+len(serializedBet) > MAX_CHUNK_SIZE - HEADER_SIZE {
 			br.unsentBet = bet
 			break
 		}

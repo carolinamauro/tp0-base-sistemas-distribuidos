@@ -42,7 +42,7 @@ func (bet *Bet) Serialize() []byte {
 	addBetField(&serializedBet, BET_NUMBER_TYPE, uint16ToBytes(bet.number))
 
 	totalSize := uint16ToBytes(uint16(len(serializedBet)))
-	messageToSend := make([]byte, 0, SIZE_MESSAGE_TYPE+SIZE_SERIALIZED_BET_LENGHT+len(serializedBet))
+	messageToSend := make([]byte, 0, SIZE_MESSAGE_TYPE+SIZE_UINT16+len(serializedBet))
 	messageToSend = append(messageToSend, MESSAGE_TYPE_BET)
 	messageToSend = append(messageToSend, totalSize...)
 	messageToSend = append(messageToSend, serializedBet...)
