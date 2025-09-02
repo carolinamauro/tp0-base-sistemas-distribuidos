@@ -1,5 +1,4 @@
 import socket
-import logging
 from common.utils import Bet
 
 MESSAGE_TYPE_BET = 1
@@ -9,7 +8,7 @@ MESSAGE_TYPE_SIZE = 1
 ACK_MESSAGE_TYPE = 0xFF
 ACK_OK = 0x00
 
-class Transport:
+class Protocol:
   def __init__(self, agencySocket: socket):
     self._agency_socket = agencySocket
   

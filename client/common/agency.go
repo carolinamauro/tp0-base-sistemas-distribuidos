@@ -23,7 +23,7 @@ type AgencyConfig struct {
 // Agency Entity that encapsulates how
 type Agency struct {
 	config 							AgencyConfig
-	transport   				*Transport
+	protocol   					*Protocol
 }
 
 // NewAgency Initializes a new Agency receiving the configuration
@@ -48,7 +48,7 @@ func (a *Agency) createAgencySocket() error {
 		)
 		return err
 	}
-	a.transport = NewTransport(conn)
+	a.protocol = NewProtocol(conn)
 	return nil
 }
 
@@ -74,11 +74,9 @@ func (a *Agency) StartAgencyLoop() {
 		return
 	}
 
-	betMessage := bet.Serialize()
 	a.createAgencySocket()
 
-	err := a.transport.SendAll(betMessage)
-	if err != nil {
+	if err := a.sendBet(bet); err != nil {
 		log.Criticalf("action: send_bet | result: fail | agency_id: %v | error: %v",
 			a.config.ID,
 			err,
@@ -87,18 +85,10 @@ func (a *Agency) StartAgencyLoop() {
 		return
 	}
 
-	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
-	err = a.transport.ReceiveAll(ackMessage)
-	
-	if err != nil {
+	if err := a.recvAck(bet); err != nil {
 		log.Criticalf("action: receive_ack | result: fail | agency_id: %v | error: %v",
 			a.config.ID,
 			err,
-		)
-	} else if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK { 
-		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-			bet.clientDNI,
-			bet.number,
 		)
 	}
 
@@ -108,10 +98,37 @@ func (a *Agency) StartAgencyLoop() {
 
 // CloseConnection closes the Agency connection gracefully
 func (a *Agency) CloseConnection() {
-	if a.transport != nil {
-		a.transport.Close()
+	if a.protocol != nil {
+		a.protocol.Close()
 		log.Infof("action: close_connection | result: success | agency_id: %v", a.config.ID)
 	}
+}
+
+// sendBet sends the serialized bet to the server
+func (a *Agency) sendBet(bet *Bet) error {
+	serializedBet := bet.Serialize()
+	err := a.protocol.SendAll(serializedBet)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// recvAck receives the ACK message from the server
+// and logs the result
+func (a *Agency) recvAck(bet *Bet) error {
+	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
+	err := a.protocol.ReceiveAll(ackMessage)
+	if err != nil {
+		return err
+	}
+	if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK { 
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
+			bet.clientDNI,
+			bet.number,
+		)
+	}
+	return nil
 }
 
 // getBetFromEnvironment retrieves bet information from environment variables

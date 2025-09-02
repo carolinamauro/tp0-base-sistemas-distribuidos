@@ -4,27 +4,27 @@ import (
 	"net"
 )
 
-// Transport struct that encapsulates the connection
-type Transport struct{
+// Protocol struct that encapsulates the connection
+type Protocol struct{
 	conn 	net.Conn
 }
 
-// NewTransport Initializes a new Transport receiving the connection
+// NewProtocol Initializes a new Protocol receiving the connection
 // as a parameter
-func NewTransport(conn net.Conn) *Transport {
-	return &Transport{
+func NewProtocol(conn net.Conn) *Protocol {
+	return &Protocol{
 		conn: conn,
 	}
 }
 
 // SendAll Sends all the bytes of the message
 // Returns an error in case of failure
-func (tm *Transport) SendAll(message []byte) error {
+func (protocol *Protocol) SendAll(message []byte) error {
 	totalSent := 0
 	messageLength := len(message)
 	
 	for totalSent < messageLength {
-		n, err := tm.conn.Write(message[totalSent:])
+		n, err := protocol.conn.Write(message[totalSent:])
 		if err != nil {
 			return err
 		}
@@ -35,12 +35,12 @@ func (tm *Transport) SendAll(message []byte) error {
 
 // ReceiveAll Receives all the bytes of the message
 // Returns an error in case of failure
-func (tm *Transport) ReceiveAll(buffer []byte) error {
+func (protocol *Protocol) ReceiveAll(buffer []byte) error {
 	totalReceived := 0
 	bufferLength := len(buffer)
 
 	for totalReceived < bufferLength {
-		n, err := tm.conn.Read(buffer[totalReceived:])
+		n, err := protocol.conn.Read(buffer[totalReceived:])
 		if err != nil {
 			return err
 		}
@@ -50,6 +50,6 @@ func (tm *Transport) ReceiveAll(buffer []byte) error {
 }
 
 // Close closes the connection
-func (tm *Transport) Close() error {
-	return tm.conn.Close()
+func (protocol *Protocol) Close() error {
+	return protocol.conn.Close()
 }
