@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"strconv"
 )
 // uint16ToBytes converts a uint16 to a byte slice in big-endian order
 func uint16ToBytes(num uint16) []byte {

@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"os"
 	"io"
-	"strconv"
 )
 
 // BetReader struct that reads bets from a CSV file and provides them in chunks

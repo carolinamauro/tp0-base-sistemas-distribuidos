@@ -46,18 +46,28 @@ func (tm *Transport) SendAll(message []byte) error {
 
 // ReceiveAll Receives all the bytes of the message
 // Returns an error in case of failure
-func (tm *Transport) ReceiveAll(buffer []byte) error {
+func (tm *Transport) ReceiveAll() []byte {
+	
+	buffer := make([]byte, SIZE_MESSAGE_TYPE + SIZE_UINT16)
+	n, err := tm.conn.Read(buffer)
+	if err != nil {
+		return nil
+	}
+	if n < SIZE_MESSAGE_TYPE {
+		return nil	
+	}
+	totalSize := int(buffer[1])<<8 | int(buffer[2])
+	buffer = make([]byte, totalSize)
 	totalReceived := 0
-	bufferLength := len(buffer)
 
-	for totalReceived < bufferLength {
+	for totalReceived < totalSize {
 		n, err := tm.conn.Read(buffer[totalReceived:])
 		if err != nil {
-			return err
+			return nil
 		}
 		totalReceived += n
 	}
-	return nil
+	return buffer
 }
 
 // Close closes the connection

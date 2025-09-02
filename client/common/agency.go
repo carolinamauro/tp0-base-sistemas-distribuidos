@@ -94,10 +94,10 @@ func (a *Agency) StartAgencyLoop() {
 			return
 		}
 
-		ackMessage := make([]byte, SIZE_ACK_MESSAGE)
-		if err := a.transport.ReceiveAll(ackMessage); err != nil {
-			log.Criticalf("action: recv_ack | result: fail | agency_id: %v | error: %v",
-				a.config.ID, err)
+		ackMessage := a.transport.ReceiveAll()
+		if ackMessage == nil {
+			log.Criticalf("action: recv_ack | result: fail | agency_id: %v",
+				a.config.ID)
 			a.CloseConnection()
 			return
 		}
