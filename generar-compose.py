@@ -9,6 +9,7 @@ services:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - CLIENTS_AMOUNT={clients_amount}
     volumes: 
       - ./server/config.ini:/config.ini
     networks: 
@@ -43,7 +44,7 @@ def generate_compose(file_name, clients_amount):
     clients_str = ""
     for i in range(1, clients_amount + 1):
         clients_str += CLIENT_TEMPLATE.format(name=f"client{i}", id=i)
-    compose = compose.format(clients=clients_str)
+    compose = compose.format(clients=clients_str, clients_amount=clients_amount)
     
     with open(file_name, "w") as f:
         f.write(compose)

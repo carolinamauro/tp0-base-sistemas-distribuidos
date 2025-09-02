@@ -6,13 +6,13 @@ from common.transport import Transport
 from common.utils import store_bets, load_bets, has_won
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, clients_amount):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self._active_agencies_connections = []
-        self._listen_backlog = listen_backlog
+        self._clients_amount = clients_amount
         self._finished_agencies = 0
         self._listening = True
 
@@ -53,7 +53,7 @@ class Server:
             self.__recv_bets(transport)
             self._finished_agencies += 1
            
-            if self._finished_agencies != self._listen_backlog:
+            if self._finished_agencies != self._clients_amount:
                 return
             
             self._send_lottery_result_to_agencies()
