@@ -57,10 +57,10 @@ func (tm *Transport) ReceiveAll() []byte {
 
 	totalSize := int(buffer[1])<<8 | int(buffer[2])
 	buffer = append(buffer, make([]byte, totalSize)...)
-	totalReceived := HEADER_SIZE
+	totalReceived := 0
 
 	for totalReceived < totalSize {
-		n, err := tm.conn.Read(buffer[totalReceived:])
+		n, err := tm.conn.Read(buffer[HEADER_SIZE + totalReceived:])
 		if err != nil {
 			return nil
 		}

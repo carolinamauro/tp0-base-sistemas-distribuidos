@@ -63,6 +63,7 @@ class Server:
                     logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
                     try:
                         transport.send_ack()
+                        logging.info("action: send_ack | result: success")
                     except Exception as e:
                         raise OSError(f"send_ack: {e}")
 
