@@ -15,11 +15,11 @@ func (lw *LotteryWinners) Deserialize(data []byte) {
 	for len(data) > 0 {
 		fieldType := data[0]
 		fieldLength := int(data[1])<<8 | int(data[2])
-		dni := data[2 : 2+fieldLength]
+		dni := data[3 : 3+fieldLength]
 		if fieldType == CLIENT_DNI_TYPE {
 			lw.Winners = append(lw.Winners, string(dni))
 		}
-		data = data[2+fieldLength:]
+		data = data[3+fieldLength:]
 	}
 }
 

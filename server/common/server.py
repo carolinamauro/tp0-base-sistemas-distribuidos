@@ -66,7 +66,6 @@ class Server:
             mtype = transport.receive_message_type()
             if mtype is None:
                 raise OSError("connection closed by peer")
-
             if transport.is_chunk_message(mtype) or transport.is_last_chunk_message(mtype):
                 try:
                     bets = transport.receive_chunk()
@@ -83,10 +82,11 @@ class Server:
                     raise OSError(f"send_ack: {e}")
 
                 if transport.is_last_chunk_message(mtype):
-                    logging.info(f"action: agency_finished | result: success | agency_id: {bets[0].agency_id}")
+                    logging.info(f"action: agency_finished | result: success | agency_id: {bets[0].agency}")
                     break
-            if transport.is_agency_id_message(mtype):
+            elif transport.is_agency_id_message(mtype):
                 transport.receive_agency_id()
+                logging.info("action: receive_agency_id | result: success")
             else:
                 raise OSError(f"invalid message type: {mtype}")
     

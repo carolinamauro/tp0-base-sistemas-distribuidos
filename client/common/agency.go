@@ -136,8 +136,6 @@ func (a *Agency) getLotteryResult() {
 		return
 	}
 
-	log.Infof("action: consulta_ganadores | result: success | agency_id: %v", lotteryMessage)
-
 	if len(lotteryMessage) > 0 && lotteryMessage[0] == MESSAGE_TYPE_LOTTERY_RESULT { 
 		lotteryWinners := NewLotteryWinners()
 		lotteryWinners.Deserialize(lotteryMessage[3:])
