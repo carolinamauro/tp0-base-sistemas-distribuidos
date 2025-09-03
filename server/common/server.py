@@ -1,8 +1,7 @@
 import socket
 import logging
 import signal
-import sys
-from common.transport import Transport
+from common.protocol import Protocol
 from common.utils import store_bets, load_bets, has_won
 
 class Server:
@@ -31,8 +30,8 @@ class Server:
         while self._listening:
             try:
                 agency_sock = self.__accept_new_connection()
-                transport = Transport(agency_sock)
-                self.__handle_agency_connection(transport)
+                protocol = Protocol(agency_sock)
+                self.__handle_agency_connection(protocol)
             except OSError as e:
                 if self._listening:
                     logging.error(f"action: accept_connections | result: fail | error: {e}")
@@ -40,7 +39,7 @@ class Server:
                     logging.info("action: server_shutdown | result: in_progress")
                 break           
 
-    def __handle_agency_connection(self, transport):
+    def __handle_agency_connection(self, protocol):
         """
         Read message from a specific agency socket and closes the socket
 
@@ -48,9 +47,9 @@ class Server:
         agency socket will also be closed
         """
         
-        self._active_agencies_connections.append(transport)
+        self._active_agencies_connections.append(protocol)
         try:
-            self.__recv_bets(transport)
+            self.__recv_bets(protocol)
             self._finished_agencies += 1
            
             if self._finished_agencies != self._clients_amount:
@@ -59,16 +58,16 @@ class Server:
             self._send_lottery_result_to_agencies()
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
-            self.__close_connection(transport)
+            self.__close_connection(protocol)
       
-    def __recv_bets(self, transport):
+    def __recv_bets(self, protocol):
         while True:
-            mtype = transport.receive_message_type()
+            mtype = protocol.receive_message_type()
             if mtype is None:
                 raise OSError("connection closed by peer")
-            if transport.is_chunk_message(mtype):
+            if protocol.is_chunk_message(mtype):
                 try:
-                    bets = transport.receive_chunk()
+                    bets = protocol.receive_chunk()
                 except Exception as e:
                     logging.info(f"action: apuesta_recibida | result: fail | cantidad: {len(bets)}")
                     raise OSError(f"receive_chunk: {e}")
@@ -76,15 +75,15 @@ class Server:
                 store_bets(bets)
                 logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
                 try:
-                    transport.send_ack()
+                    protocol.send_ack()
                 except Exception as e:
                     raise OSError(f"send_ack: {e}")
 
-            elif transport.is_end_of_chunks_message(mtype):
-                logging.info(f"action: agency_finished | result: success | agency_id: {transport.agency_id}")
+            elif protocol.is_end_of_chunks_message(mtype):
+                logging.info(f"action: agency_finished | result: success | agency_id: {protocol.agency_id}")
                 break
-            elif transport.is_agency_id_message(mtype):
-                transport.receive_agency_id()
+            elif protocol.is_agency_id_message(mtype):
+                protocol.receive_agency_id()
                 logging.info("action: receive_agency_id | result: success")
             else:
                 raise OSError(f"invalid message type: {mtype}")
@@ -99,14 +98,14 @@ class Server:
                 winners_by_agency[bet.agency] = []
             winners_by_agency[bet.agency].append(bet)
         
-        for transport in self._active_agencies_connections:
+        for protocol in self._active_agencies_connections:
             try:
-                transport.send_lottery_result(winners_by_agency.get(transport.agency_id, []))
-                logging.info(f"action: send_lottery_result | result: success | agency socket: {transport.addr()}")
+                protocol.send_lottery_result(winners_by_agency.get(protocol.agency_id, []))
+                logging.info(f"action: send_lottery_result | result: success | agency socket: {protocol.addr()}")
             except Exception as e:
-                logging.error(f"action: send_lottery_result | result: fail | agency socket: {transport.addr()} | error: {e}")
+                logging.error(f"action: send_lottery_result | result: fail | agency socket: {protocol.addr()} | error: {e}")
             finally:
-                self.__close_connection(transport)
+                self.__close_connection(protocol)
 
               
     def __accept_new_connection(self):
@@ -123,18 +122,18 @@ class Server:
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
     
-    def __close_connection(self, transport):
-        logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {transport.addr()}")
-        transport.close()
-        self._active_agencies_connections = [t for t in self._active_agencies_connections if t.agency_id != transport.agency_id]
+    def __close_connection(self, protocol):
+        logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {protocol.addr()}")
+        protocol.close()
+        self._active_agencies_connections = [t for t in self._active_agencies_connections if t.agency_id != protocol.agency_id]
         self._finished_agencies -= 1
     
     def __handle_sigterm_signal(self, signum, frame):
         self._listening = False
         logging.info('action: SIGTERM signal received | result: in_progress')
-        for transport in self._active_agencies_connections:
-            transport.close()
-            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {transport._agency_socket}')
+        for protocol in self._active_agencies_connections:
+            protocol.close()
+            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {protocol._agency_socket}')
         socket_addr = self._server_socket.getsockname()[0]
         self._server_socket.close()            
         logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')

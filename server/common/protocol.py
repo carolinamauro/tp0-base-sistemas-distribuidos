@@ -13,7 +13,7 @@ MESSAGE_TYPE_LOTTERY_RESULT = 5
 MESSAGE_TYPE_ACK = 0xFF
 ACK_OK = 0x00
 
-class Transport:
+class Protocol:
   def __init__(self, agencySocket: socket):
     self._agency_socket = agencySocket
     self.agency_id = None
