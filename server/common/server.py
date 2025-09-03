@@ -1,8 +1,7 @@
 import socket
 import logging
 import signal
-import sys
-from common.transport import Transport
+from common.protocol import Protocol
 from common.utils import store_bets
 
 class Server:
@@ -29,9 +28,8 @@ class Server:
         while self._listening:
             try:
                 agency_sock = self.__accept_new_connection()
-                transport = Transport(agency_sock)
-                self._active_agencies_connections.append(transport)
-                self.__handle_agency_connection(transport)
+                protocol = Protocol(agency_sock)
+                self.__handle_agency_connection(protocol)
             except OSError as e:
                 if self._listening:
                     logging.error(f"action: accept_connections | result: fail | error: {e}")
@@ -39,44 +37,57 @@ class Server:
                     logging.info("action: server_shutdown | result: in_progress")
                 break           
 
-    def __handle_agency_connection(self, transport):
+    def __handle_agency_connection(self, protocol):
         """
         Read message from a specific agency socket and closes the socket
 
         If a problem arises in the communication with the agency, the
         agency socket will also be closed
         """
+        
+        self._active_agencies_connections.append(protocol)
         try:
-            while True:
-                mtype = transport.receive_message_type()
-                if mtype is None:
-                    raise OSError("connection closed by peer")
-
-                if transport.is_chunk_message(mtype) or transport.is_last_chunk_message(mtype):
-                    try:
-                        bets = transport.receive_chunk()
-                    except Exception as e:
-                        logging.info(f"action: apuesta_recibida | result: fail | cantidad: {len(bets)}")
-                        raise OSError(f"receive_chunk: {e}")
-
-                    store_bets(bets)
-                    logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
-                    try:
-                        transport.send_ack()
-                        logging.info("action: send_ack | result: success")
-                    except Exception as e:
-                        raise OSError(f"send_ack: {e}")
-
-                    if transport.is_last_chunk_message(mtype):
-                        break
-                else:
-                    raise OSError(f"invalid message type: {mtype}")
+            self.__recv_bets(protocol)
         except OSError as e:
-            logging.error(f"action: receive_message | result: fail | error: {e}")
+            logging.error(f"action: agency_communication | result: fail | error: {e}")
         finally:
-            logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {transport.addr()}")
-            transport.close()
-            self._active_agencies_connections.remove(transport)
+            logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {protocol.addr()}")
+            protocol.close()
+            self._active_agencies_connections = [p for p in self._active_agencies_connections if p._agency_socket != protocol._agency_socket]
+
+    def __recv_bets(self, protocol):
+        """
+        Receive bets from a specific agency socket
+
+        Function blocks until the agency sends all the bets or an error
+        arises. In case of success, the bets received are returned.
+        Otherwise, an exception is raised
+        """
+
+        while True:
+            mtype = protocol.receive_message_type()
+            if mtype is None:
+                raise OSError("connection closed by peer")
+
+            if protocol.is_chunk_message(mtype):
+                try:
+                    bets = protocol.receive_chunk()
+                except Exception as e:
+                    logging.info(f"action: apuesta_recibida | result: fail | cantidad: {len(bets)}")
+                    raise OSError(f"receive_chunk: {e}")
+
+                logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
+                try:
+                    protocol.send_ack()
+                except Exception as e:
+                    raise OSError(f"send_ack: {e}")
+
+            elif protocol.is_end_of_chunks_message(mtype):
+                logging.info(f"action: agency_finished | result: success | agency_ip: {protocol.addr()}")
+                break
+            else:
+                raise OSError(f"invalid message type: {mtype}")
+
             
     def __accept_new_connection(self):
         """
@@ -95,9 +106,9 @@ class Server:
     def __handle_sigterm_signal(self, signum, frame):
         self._listening = False
         logging.info('action: SIGTERM signal received | result: in_progress')
-        for transport in self._active_agencies_connections:
-            transport.close()
-            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {transport._agency_socket}')
+        for protocol in self._active_agencies_connections:
+            protocol.close()
+            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {protocol._agency_socket}')
         socket_addr = self._server_socket.getsockname()[0]
         self._server_socket.close()            
         logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')

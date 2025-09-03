@@ -3,7 +3,7 @@ package common
 const (
 	MESSAGE_TYPE_BET uint8 = 0x01
 	MESSAGE_TYPE_CHUNK uint8 = 0x02
-	MESSAGE_TYPE_LAST_CHUNK uint8 = 0x03
+	MESSAGE_TYPE_END_OF_CHUNKS uint8 = 0x03
 	MESSAGE_TYPE_ACK uint8 = 0xFF
 	
 	ACK_OK uint8 = 0x00

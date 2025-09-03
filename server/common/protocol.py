@@ -1,5 +1,4 @@
 import socket
-import logging
 from common.utils import Bet
 
 SIZE_SERIALIZED_MESSAGE_LENGHT = 2
@@ -7,11 +6,11 @@ MESSAGE_TYPE_SIZE = 1
 
 MESSAGE_TYPE_BET = 1
 MESSAGE_TYPE_CHUNK = 2
-MESSAGE_TYPE_LAST_CHUNK = 3
+MESSAGE_TYPE_END_OF_CHUNKS = 3
 MESSAGE_TYPE_ACK = 0xFF
 ACK_OK = 0x00
 
-class Transport:
+class Protocol:
   def __init__(self, agencySocket: socket):
     self._agency_socket = agencySocket
    
@@ -50,8 +49,8 @@ class Transport:
   def is_chunk_message(self, message_type):
     return message_type == MESSAGE_TYPE_CHUNK
 
-  def is_last_chunk_message(self, message_type):
-    return message_type == MESSAGE_TYPE_LAST_CHUNK
+  def is_end_of_chunks_message(self, message_type):
+    return message_type == MESSAGE_TYPE_END_OF_CHUNKS
   
   def receive_chunk(self):
     """
