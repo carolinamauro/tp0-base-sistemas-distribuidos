@@ -23,7 +23,7 @@ type AgencyConfig struct {
 // Agency Entity that encapsulates how
 type Agency struct {
 	config 							AgencyConfig
-	transport   				*Transport
+	protocol   				 	*Protocol
 	running           	bool
 }
 
@@ -49,93 +49,91 @@ func (a *Agency) createAgencySocket() error {
 		)
 		return err
 	}
-	a.transport = NewTransport(conn)
+	a.protocol = NewProtocol(conn)
 	return nil
-}
-
-// handleSigtermSignal Handles the SIGTERM signal by closing the connection gracefully
-func (a *Agency) handleSigtermSignal() {
-	log.Infof("action: SIGTERM signal received | result: in_progress | agency_id: %v", a.config.ID)
-	a.CloseConnection()
 }
 
 // StartAgencyLoop Send messages to the Agency until some time threshold is met
 func (a *Agency) StartAgencyLoop() {
 	signalChannel := make(chan os.Signal, 2)
-    signal.Notify(signalChannel, syscall.SIGTERM)
-    go func() {
-        <-signalChannel
-        a.handleSigtermSignal()
-				close(signalChannel)
-    }()
+  signal.Notify(signalChannel, syscall.SIGTERM)
 
-	a.running = true
 	betReader := NewBetReader(a.config.BatchMaxAmount)
-	a.createAgencySocket()
 	
-	a.sendAgencyID()
+	// Crear socket
+  if err := a.createAgencySocket(); err != nil {
+      log.Criticalf("action: create_socket | result: fail | agency_id: %v | error: %v", a.config.ID, err)
+      betReader.Close()
+      signal.Stop(signalChannel)
+      return
+  }
 
-	for a.running && !betReader.allBetsRead {
-		betChunk := betReader.getChunk(a.config.ID)
-		
-		if len(betChunk) == 0 {
-			break
-		}
-
-		if err := a.transport.SendMessage(MESSAGE_TYPE_CHUNK, betChunk); err != nil {
-			log.Criticalf("action: send_chunk | result: fail | agency_id: %v | error: %v",
-				a.config.ID,
-				err,
-			)
-			a.CloseConnection()
-			return
-		}
-
-		ackMessage := a.transport.ReceiveAll()
-		if ackMessage == nil {
-			log.Criticalf("action: recv_ack | result: fail | agency_id: %v",
-				a.config.ID)
-			a.CloseConnection()
-			return
-		}
-
-		if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK {
-			log.Infof("action: apuesta_enviada | result: success | agency_id: %v",
-				a.config.ID, 
-			)
-		}
-		time.Sleep(a.config.LoopPeriod)
-	}
-	
-	// Send end of chunks message
-	if err := a.transport.SendMessage(MESSAGE_TYPE_END_OF_CHUNKS, []byte{}); err != nil {
-		log.Criticalf("action: send_end_of_chunks | result: fail | agency_id: %v | error: %v",
-			a.config.ID,
-			err,
-		)
+	if err := a.sendAgencyID(); err != nil {
+		betReader.Close()
+		signal.Stop(signalChannel)
 		a.CloseConnection()
 		return
 	}
 
+  loop: for {
+      select {
+      case <-signalChannel:
+          log.Infof("action: SIGTERM signal received | result: in_progress | agency_id: %v", a.config.ID)
+          break loop
+      default:
+          chunk := betReader.getChunk(a.config.ID)
+					if betReader.allBetsRead && len(chunk) == 0 {
+						a.protocol.SendEndOfChunks(a.config.ID)
+						break loop
+					}
+
+          if err := a.protocol.SendMessage(MESSAGE_TYPE_CHUNK, chunk); err != nil {
+            log.Criticalf("action: send_chunk | result: fail | agency_id: %v | error: %v", a.config.ID, err)
+						break loop
+					}
+
+          if ackMessage := a.recvAck(); ackMessage == nil {
+            log.Criticalf("action: receive_ack | result: fail | agency_id: %v", a.config.ID)
+						break loop
+          }
+      }	
+  }
+
 	// Wait for lottery results
 
+	betReader.Close()
 	a.getLotteryResult()
 	a.CloseConnection()
-
+	signal.Stop(signalChannel)
 }
 
 // CloseConnection closes the Agency connection gracefully
 func (a *Agency) CloseConnection() {
 	a.running = false
-	if a.transport != nil {
-		a.transport.Close()
+	if a.protocol != nil {
+		a.protocol.Close()
 		log.Infof("action: close_connection | result: success | agency_id: %v", a.config.ID)
 	}
 }
 
+// recvAck receives the ACK message from the server
+// and logs the result
+func (a *Agency) recvAck() []byte {
+	ackMessage := a.protocol.ReceiveAll()
+	if ackMessage == nil {
+		return nil
+	}
+	if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK { 
+		log.Infof("action: apuesta_enviada | result: success | agency_id: %v",
+				a.config.ID, 
+		)
+	}
+	return ackMessage
+}
+
 func (a *Agency) getLotteryResult() {
 
-	lotteryMessage := a.transport.ReceiveAll()
+	lotteryMessage := a.protocol.ReceiveAll()
 	if lotteryMessage == nil {
 		log.Criticalf("action: recv_lottery | result: fail | agency_id: %v",
 			a.config.ID)
@@ -152,7 +150,7 @@ func (a *Agency) getLotteryResult() {
 
 func (a *Agency) sendAgencyID() error {
 	agencyIDBytes := []byte(a.config.ID)
-	if err := a.transport.SendMessage(MESSAGE_TYPE_AGENCY_ID, agencyIDBytes); err != nil {
+	if err := a.protocol.SendMessage(MESSAGE_TYPE_AGENCY_ID, agencyIDBytes); err != nil {
 		log.Criticalf("action: send_agency_id | result: fail | agency_id: %v | error: %v",
 			a.config.ID,
 			err,
@@ -161,3 +159,4 @@ func (a *Agency) sendAgencyID() error {
 	}
 	return nil
 }
+

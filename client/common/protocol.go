@@ -5,37 +5,37 @@ import (
 )
 
 // Transport struct that encapsulates the connection
-type Transport struct{
+type Protocol struct{
 	conn 	net.Conn
 }
 
-// NewTransport Initializes a new Transport receiving the connection
+// NewProtocol Initializes a new Protocol receiving the connection
 // as a parameter
-func NewTransport(conn net.Conn) *Transport {
-	return &Transport{
+func NewProtocol(conn net.Conn) *Protocol {
+	return &Protocol{
 		conn: conn,
 	}
 }
 
 // SendMessage Sends a message with the given type and content
 // Returns an error in case of failure
-func (tm *Transport) SendMessage(messageType uint8, message []byte) error {
+func (protocol *Protocol) SendMessage(messageType uint8, message []byte) error {
 	totalSize := uint16ToBytes(uint16(len(message)))
 	messageToSend := make([]byte, 0, len(message)+SIZE_MESSAGE_TYPE)
 	messageToSend = append(messageToSend, messageType)
 	messageToSend = append(messageToSend, totalSize...)
 	messageToSend = append(messageToSend, message...)
-	return tm.SendAll(messageToSend)
+	return protocol.SendAll(messageToSend)
 }
 
 // SendAll Sends all the bytes of the message
 // Returns an error in case of failure
-func (tm *Transport) SendAll(message []byte) error {
+func (protocol *Protocol) SendAll(message []byte) error {
 	totalSent := 0
 	messageLength := len(message)
 	
 	for totalSent < messageLength {
-		n, err := tm.conn.Write(message[totalSent:])
+		n, err := protocol.conn.Write(message[totalSent:])
 		if err != nil {
 			return err
 		}
@@ -46,11 +46,11 @@ func (tm *Transport) SendAll(message []byte) error {
 
 // ReceiveAll Receives all the bytes of the message
 // Returns an error in case of failure
-func (tm *Transport) ReceiveAll() []byte {
+func (protocol *Protocol) ReceiveAll() []byte {
 
 	buffer := make([]byte, HEADER_SIZE)
 
-  n, err := tm.conn.Read(buffer)
+  n, err := protocol.conn.Read(buffer)
 	if err != nil || n < HEADER_SIZE {
 		return nil
 	}
@@ -60,7 +60,7 @@ func (tm *Transport) ReceiveAll() []byte {
 	totalReceived := 0
 
 	for totalReceived < totalSize {
-		n, err := tm.conn.Read(buffer[HEADER_SIZE + totalReceived:])
+		n, err := protocol.conn.Read(buffer[HEADER_SIZE + totalReceived:])
 		if err != nil {
 			return nil
 		}
@@ -69,7 +69,13 @@ func (tm *Transport) ReceiveAll() []byte {
 	return buffer
 }
 
+func (protocol *Protocol) SendEndOfChunks(agencyId string) {
+	if err := protocol.SendMessage(MESSAGE_TYPE_END_OF_CHUNKS, nil); err != nil {
+    log.Criticalf("action: end_of_chunks | result: fail | agency_id: %v | error: %v", agencyId, err)
+	}
+}
+
 // Close closes the connection
-func (tm *Transport) Close() error {
-	return tm.conn.Close()
+func (protocol *Protocol) Close() error {
+	return protocol.conn.Close()
 }

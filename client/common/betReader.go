@@ -65,3 +65,14 @@ func (br *BetReader) getChunk(agencyId string) []byte {
 
 	return chunk
 }
+
+func (br *BetReader) Close() {
+	if br.file == nil {
+		return
+	}
+	if err := br.file.Close(); err != nil {
+		log.Errorf("action: close_bet_reader | result: fail | error: %v", err)
+	} else {
+		log.Infof("action: close_bet_reader | result: success")
+	}
+}
