@@ -69,6 +69,7 @@ func (protocol *Protocol) ReceiveAll() []byte {
 	return buffer
 }
 
+// SendEndOfChunks Sends an end of chunks message to the server
 func (protocol *Protocol) SendEndOfChunks(agencyId string) {
 	if err := protocol.SendMessage(MESSAGE_TYPE_END_OF_CHUNKS, nil); err != nil {
     log.Criticalf("action: end_of_chunks | result: fail | agency_id: %v | error: %v", agencyId, err)

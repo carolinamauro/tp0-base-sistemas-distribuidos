@@ -60,13 +60,13 @@ func (a *Agency) StartAgencyLoop() {
 
 	betReader := NewBetReader(a.config.BatchMaxAmount)
 	
-	// Crear socket
-  if err := a.createAgencySocket(); err != nil {
-      log.Criticalf("action: create_socket | result: fail | agency_id: %v | error: %v", a.config.ID, err)
-      betReader.Close()
-      signal.Stop(signalChannel)
-      return
-  }
+	if connError := a.tryConnection(); connError != nil {
+		log.Errorf(
+		  "action: connect | result: fail | client_id: %v | error: could not establish connection after 3 attempts: %v",
+		  a.config.ID, connError,
+		)
+		return
+	}
 
 	if err := a.sendAgencyID(); err != nil {
 		betReader.Close()
@@ -116,8 +116,10 @@ func (a *Agency) CloseConnection() {
 	}
 }
 
-// recvAck receives the ACK message from the server
-// and logs the result
+// recvAck receives the ACK message from the server:
+// 		* ACK_OK if the chunk was processed successfully
+// 		* PROCESS_CHUNK_ERROR if there was an error processing the chunk
+// Returns the ackMessage or nil in case of failure.
 func (a *Agency) recvAck() []byte {
 	ackMessage := a.protocol.ReceiveAll()
 	if ackMessage == nil {
@@ -128,9 +130,18 @@ func (a *Agency) recvAck() []byte {
 				a.config.ID, 
 		)
 	}
+	if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == PROCESS_CHUNK_ERROR {
+		log.Errorf("action: apuesta_enviada | result: fail | agency_id: %v | error: process_chunk_error",
+				a.config.ID, 
+		)
+	}
+	
 	return ackMessage
 }
 
+// getLotteryResult waits for the lottery result message from the server
+// and processes it. If the message is not received or is invalid, it logs
+// a critical error and closes the connection.
 func (a *Agency) getLotteryResult() {
 
 	lotteryMessage := a.protocol.ReceiveAll()
@@ -148,6 +159,8 @@ func (a *Agency) getLotteryResult() {
 	}
 }
 
+// sendAgencyID sends the agency ID to the server upon connection.
+// Returns an error if the message could not be sent.
 func (a *Agency) sendAgencyID() error {
 	agencyIDBytes := []byte(a.config.ID)
 	if err := a.protocol.SendMessage(MESSAGE_TYPE_AGENCY_ID, agencyIDBytes); err != nil {
@@ -160,3 +173,26 @@ func (a *Agency) sendAgencyID() error {
 	return nil
 }
 
+// tryConnection Tries to connect to the server 3 times before giving up
+// and returning the last error encountered
+func (a *Agency) tryConnection() error {
+	var connError error
+	connError = nil
+	for tried := 1; tried <= 3; tried++ {
+		connError = a.createAgencySocket()
+		if connError == nil {
+		    break
+		}
+
+    log.Criticalf(
+      "action: connect | result: retrying | agency_id: %v | attempt: %d | error: %v",
+      a.config.ID, tried, connError,
+    )
+
+    if tried < 3 {
+      time.Sleep(a.config.LoopPeriod)
+    }
+	}
+
+	return connError
+}

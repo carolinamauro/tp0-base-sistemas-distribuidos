@@ -9,6 +9,7 @@ const (
 	MESSAGE_TYPE_LOTTERY_RESULT uint8 = 0x05
 	
 	ACK_OK uint8 = 0x00
+	PROCESS_CHUNK_ERROR uint8 = 0x01
 	
 	SIZE_MESSAGE_TYPE	int = 1
 	SIZE_UINT16 int = 2
