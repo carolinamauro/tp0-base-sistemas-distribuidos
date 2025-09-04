@@ -73,10 +73,10 @@ func (a *Agency) StartAgencyLoop() {
 		return
 	}
 
-	if connError := c.tryConnection(); connError != nil {
+	if connError := a.tryConnection(); connError != nil {
 		log.Errorf(
 		  "action: connect | result: fail | client_id: %v | error: could not establish connection after 3 attempts: %v",
-		  c.config.ID, connError,
+		  a.config.ID, connError,
 		)
 		return
 	}
@@ -166,22 +166,22 @@ func getBetFromEnvironment() *Bet {
 
 // tryConnection Tries to connect to the server 3 times before giving up
 // and returning the last error encountered
-func (c *Client) tryConnection() error {
+func (a *Agency) tryConnection() error {
 	var connError error
 	connError = nil
 	for tried := 1; tried <= 3; tried++ {
-		connError = c.createClientSocket()
+		connError = a.createAgencySocket()
 		if connError == nil {
 		    break
 		}
 
     log.Criticalf(
-      "action: connect | result: retrying | client_id: %v | attempt: %d | error: %v",
-      c.config.ID, tried, connError,
+      "action: connect | result: retrying | agency_id: %v | attempt: %d | error: %v",
+      a.config.ID, tried, connError,
     )
 
     if tried < 3 {
-      time.Sleep(c.config.LoopPeriod)
+      time.Sleep(a.config.LoopPeriod)
     }
 	}
 

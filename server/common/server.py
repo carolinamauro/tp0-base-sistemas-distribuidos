@@ -60,7 +60,7 @@ class Server:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             protocol.close()
-            self._active_agencies_connections = [p for p in self._active_agencies_connections if p.is_same_socket(protocol) == False]
+            self._active_agencies_connections = [p for p in self._active_agencies_connections if p.is_same(protocol) == False]
 
     def __accept_new_connection(self):
         """
