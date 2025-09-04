@@ -123,6 +123,7 @@ class Server:
                 logging.error(f"action: send_lottery_result | result: fail | agency socket: {protocol.addr()} | error: {e}")
             finally:
                 self.__close_connection(protocol)
+                self._finished_agencies -= 1
 
               
     def __accept_new_connection(self):
@@ -143,10 +144,9 @@ class Server:
         """
         Close a specific agency connection and removes it from the active connections list
         """
-        
-        protocol.close()
-        self._active_agencies_connections = [p for p in self._active_agencies_connections if p.is_same(protocol) == False]
         logging.info(f"action: close_agency_connection | result: success | agency socket: {protocol.addr()}")
+        self._active_agencies_connections = [p for p in self._active_agencies_connections if not p.is_same(protocol)]
+        protocol.close()
         
     def __close_server_socket(self):
         """
