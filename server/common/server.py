@@ -77,6 +77,7 @@ class Server:
                     protocol.send_process_chunk_error()
                     logging.info(f"action: apuesta_recibida | result: fail")
                     raise OSError(f"receive_chunk: {e}")
+                store_bets(bets)
                 logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
                 try:
                     protocol.send_ack()
