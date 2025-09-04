@@ -87,13 +87,12 @@ class Server:
         2. Closes all active client connections
         """
         
+        socket_addr = self._server_socket.getsockname()[0]
+        logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
         self.__close_server_socket()
-        logging.info('action: SIGTERM signal received | result: in_progress')
         for client_socket in self._active_client_connections:
             client_socket.close()
             logging.info(f'action: SIGTERM signal received | result: success | client socket: {client_socket}')
-        socket_addr = self._server_socket.getsockname()[0]
-        logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
         
 
         
