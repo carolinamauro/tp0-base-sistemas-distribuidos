@@ -123,6 +123,6 @@ class Server:
         logging.info(f'action: SIGTERM signal received | result: success | server socket ')
         for protocol in self._active_agencies_connections:
             protocol.close()
-            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {protocol.addr()}')
+            logging.info(f'action: SIGTERM signal received | result: success | agency socket')
 
         
