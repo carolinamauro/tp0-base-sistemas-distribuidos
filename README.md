@@ -71,9 +71,11 @@ client1  | 2024-08-21 22:11:40 INFO     action: loop_finished | result: success 
 client1 exited with code 0
 ```
 
-
 ## Parte 1: Introducción a Docker
 En esta primera parte del trabajo práctico se plantean una serie de ejercicios que sirven para introducir las herramientas básicas de Docker que se utilizarán a lo largo de la materia. El entendimiento de las mismas será crucial para el desarrollo de los próximos TPs.
+
+### Ejercicio N°1:
+
 
 ### Ejercicio N°1:
 Definir un script de bash `generar-compose.sh` que permita crear una definición de Docker Compose con una cantidad configurable de clientes.  El nombre de los containers deberá seguir el formato propuesto: client1, client2, client3, etc. 
@@ -93,8 +95,35 @@ python3 mi-generador.py $1 $2
 
 En el archivo de Docker Compose de salida se pueden definir volúmenes, variables de entorno y redes con libertad, pero recordar actualizar este script cuando se modifiquen tales definiciones en los sucesivos ejercicios.
 
+#### Solución:
+
+Para generar un archivo de Docker Compose, se creó el script `generar-compose.sh` en la raíz del proyecto. El mismo recibe dos parámetros: el nombre del archivo de salida y la cantidad de clientes a generar. 
+
+Ejemplo de uso:
+
+`./generar-compose.sh docker-compose-dev.yaml 5`
+
+El archivo `generar-compose.sh` chequea que se envien los dos parametros esperados y en caso contrario muestra un mensaje de ayuda. Utiliza un subscript de Python llamado `generar-compose.py` para generar el archivo de Docker Compose. El script utiliza templetes para definir las secciones comunes del compose y luego itera para agregar la cantidad de clientes solicitada. 
+
 ### Ejercicio N°2:
 Modificar el cliente y el servidor para lograr que realizar cambios en el archivo de configuración no requiera reconstruír las imágenes de Docker para que los mismos sean efectivos. La configuración a través del archivo correspondiente (`config.ini` y `config.yaml`, dependiendo de la aplicación) debe ser inyectada en el container y persistida por fuera de la imagen (hint: `docker volumes`).
+
+#### Solución:
+
+Partiendo del ejercicio anterior, se modificó el script `generar-compose.sh` para incluir volúmenes en las definiciones de cliente y servidor.
+
+Se modifico el archivo docker-compose.py agregando los siguientes volúmenes:
+Server
+```yaml
+    volumes:
+      - ./server/config.yaml:/config.yaml
+```
+Client
+```yaml
+    volumes:
+      - ./client/config.yaml:/config.yaml
+```
+Al sumar los volumes para los archivos de configuración del cliente y del servidor los mismos pueden ser editados en el host y reflejarse en los containers sin necesidad de reconstruir las imágenes. Los archivos `config.yaml` y `config.ini` son inyectados en los containers en la ruta `/config.yaml` y `/config.ini` respectivamente.
 
 
 ### Ejercicio N°3:
@@ -104,13 +133,46 @@ En caso de que la validación sea exitosa imprimir: `action: test_echo_server | 
 
 El script deberá ubicarse en la raíz del proyecto. Netcat no debe ser instalado en la máquina _host_ y no se pueden exponer puertos del servidor para realizar la comunicación (hint: `docker network`). `
 
+#### Solución:
+
+Se creo el script `validar-echo-server.sh` el cual obtiene del archivo `config.ini` las varibles `SERVER_IP` y `SERVER_PORT`. Luego se ejecuta el siguiente comando:
+`server_response=$(docker run --rm --network tp0_testing_net busybox sh -c "echo $message | nc $SERVER_IP $SERVER_PORT")`
+donde
+1. Se corre la imagen de docker busybox (una distribucion de linux liviana que incluye el comando de netcat) en la red tp0_testing_net, la misma en la que se encontrará el servidor corriendo. De esta manera, ambos contenedores pueden comunicarse  sin la necesidad de exponer un puerto.
+2. Con `sh -c` se abre una terminal dentro del contenedor y se ejecuta el comando `echo $message`, que imprime el mensaje "Hola,Mundo!". Ese mensaje se redirige mediante el pipe (|) al comando netcat (nc), que lo envía al servidor en la IP y el puerto especificados.
+3. La espuesta se guarda en la variable  `server_response` y luego se lo compara con el mensaje original a ver si el servidor esta respondiendo correctammente.
+  
+  - En caso de que la validación sea exitosa se imprime: `action: test_echo_server | result: success`, de lo contrario se imprime:`action: test_echo_server | result: fail`.
 
 ### Ejercicio N°4:
 Modificar servidor y cliente para que ambos sistemas terminen de forma _graceful_ al recibir la signal SIGTERM. Terminar la aplicación de forma _graceful_ implica que todos los _file descriptors_ (entre los que se encuentran archivos, sockets, threads y procesos) deben cerrarse correctamente antes que el thread de la aplicación principal muera. Loguear mensajes en el cierre de cada recurso (hint: Verificar que hace el flag `-t` utilizado en el comando `docker compose down`).
 
+#### Solución:
+
+- En el cliente, se agregó un canal para escuchar la señal SIGTERM y se implementó la función `handleSigtermSignal` para cerrar la conexión del cliente de manera adecuada.
+```
+	signalChannel := make(chan os.Signal, 2)
+    signal.Notify(signalChannel, syscall.SIGTERM)
+    go func() {
+        <-signalChannel
+        c.handleSigtermSignal()
+    }()
+```
+Además, se implementó un mecanismo de reintentos para la conexión al servidor en caso de que falle. Se intenta reconectar hasta 3 veces con un intervalo definido por la variable de entorno `LoopPeriod` entre cada intento. Si no se puede establecer la conexión después de los reintentos, se loguea un error y se cierra el cliente.
+- En el servidor, se agregó un manejador de señales para SIGTERM que cierra todas las conexiones activas de los clientes y el socket del servidor antes de salir. Se implementó la función `__handle_sigterm_signal` para manejar esta lógica. Se guardan las conexiones activas en una lista `_active_client_connections` para poder cerrarlas todas al recibir la señal SIGTERM. Este manejo se agrego en la función `run` antes de emepzar a escuchar conexiones:
+```
+  signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
+```
+Además, se agrego la varibale `_is_listening` para que el servidor pueda dejar de aceptar nuevas conexiones cuando se recibe la señal SIGTERM.
+
+
+El flag `-t` en el comando `docker compose down` especifica el tiempo de espera antes de forzar la terminación de los contenedores. Esto permite que las aplicaciones dentro de los contenedores tengan tiempo para cerrar sus recursos de manera adecuada antes de ser terminadas abruptamente.
+
 ## Parte 2: Repaso de Comunicaciones
 
 Las secciones de repaso del trabajo práctico plantean un caso de uso denominado **Lotería Nacional**. Para la resolución de las mismas deberá utilizarse como base el código fuente provisto en la primera parte, con las modificaciones agregadas en el ejercicio 4.
+
+
 
 ### Ejercicio N°5:
 Modificar la lógica de negocio tanto de los clientes como del servidor para nuestro nuevo caso de uso.
@@ -133,6 +195,144 @@ Se deberá implementar un módulo de comunicación entre el cliente y el servido
 * Correcta separación de responsabilidades entre modelo de dominio y capa de comunicación.
 * Correcto empleo de sockets, incluyendo manejo de errores y evitando los fenómenos conocidos como [_short read y short write_](https://cs61.seas.harvard.edu/site/2018/FileDescriptors/).
 
+#### Solución:
+
+Para el protocolo definido de comunicación entre cliente y servidor, se utilizara el formato TLV (Type-Length-Value) para el envío de los datos. Existira al inicio un campo que indicara el tipo del mensaje (apuesta, confirmacion, etc). Para esto se reservara 1 byte. Luego se indicara la longitud del mensaje en bytes, para lo cual se reservara 2 bytes. Por ultimo se enviara el mensaje serializado en bytes.
+
+Se seralizara en big-endian.
+
+En caso que se envie un mensaje tipo MESSAGE_TYPE_BET (Type = 0x01), el campo Value contendra los datos de la apuesta serializados siguiendo el siguiente formato:
+
+| Field             | Type           | Length (bytes) | Description                       |
+|-------------------|----------------|----------------|-----------------------------------|
+| Id de la agencia  | 0x10           | 2              | Identificador unico de la agencia |
+| Nombre            | 0x11           | Variable       | Nombre del apostador              |
+| Apellido          | 0x12           | Variable       | Apellido del apostador            |
+| DNI               | 0x13           | Variable       | Documento Nacional de Identidad   |
+| Fecha Nac.        | 0x14           | Variable       | Fecha de nacimiento (YYYY-MM-DD)  |
+| Numero            | 0x15           | 2              | Numero apostado                   |
+
+En caso que se envie un mensaje tipo ACK_MESSAGE_TYPE (Type = 0xFF), el campo Value contendra los siguientes datos:
+| Field             | Type           | Length (bytes) | Description                                                   |
+|-------------------|----------------|----------------|---------------------------------------------------------------|
+| ACK               | 0x00           | 4              | Mensaje recicibido correctamente (0x00000000)                 |
+
+Por ejemplo, para enviar una apuesta del apostador "Carolina Gonzalez", con DNI 34098765, nacimiento 1990-01-01 y numero 1001, desde la agencia con ID 1, se enviaria el siguiente mensaje:
+
+01 → MessageType = BET.
+
+00 36 → longitud del payload = 54 bytes.
+
+| Hexadecimal                           | Significado                         | Valor interpretado      |
+| ------------------------------------- | ----------------------------------- | ----------------------- |
+| `10 04 00 00 00 01`                   | AGENCY\_ID (Type=16, Len=4)         | `0x00000001` = **1**    |
+| `11 08 43 61 72 6F 6C 69 6E 61`       | CLIENT\_NAME (Type=17, Len=8)       | `"Carolina"`            |
+| `12 08 47 6F 6E 7A 61 6C 65 7A`       | CLIENT\_SURNAME (Type=18, Len=8)    | `"Gonzalez"`            |
+| `13 08 33 34 30 39 38 37 36 35`       | CLIENT\_DNI (Type=19, Len=8)        | `"34098765"`            |
+| `20 0A 31 39 39 30 2D 30 31 2D 30 31` | CLIENT\_BIRTHDATE (Type=20, Len=10) | `"1990-01-01"`          |
+| `15 04 00 00 03 E9`                   | BET\_NUMBER (Type=21, Len=4)        | `0x000003E9` = **1001** |
+
+Una vez que el servidor reciba la apuesta y la almacena, debera enviar una confirmacion al cliente (ack). Finalmente, cierra la conexion.
+
+#### **Agencia**: 
+
+Se creo la clase bet.go en el cliente para representar la apuesta. En la misma se encuentran los metodos para serializar la apuesta:
+```go
+type Bet struct {
+	agencyId			 			uint16
+	number        			uint16    
+	clientName    			string 
+	clientSurname 			string 
+	clientDNI    			  string 
+	clientBirthDate     string 
+}
+```
+Se creo la clase protocol.go para manejar la comunicación con el servidor:
+```go
+type Protocol struct {
+  conn net.Conn
+}
+```
+En la misma se encuentran los metodos para enviar y recibir mensajes evitando los fenomenos de short read y short write. En el protoclo de comunicacion definido, se envia 1 byte para el tipo de mensaje, 2 bytes para la longitud del mensaje y luego el mensaje serializado en bytes. Por ende, en el metodo `ReceiveAll` se lee primero el tipo de mensaje, luego la longitud del mensaje y por ultimo se lee la cantidad de bytes indicada por la longitud del mensaje, evitando asi el short read.
+
+Dicha función es utilizada para recibir el mensaje de confirmación del servidor:
+```go
+func (a *Agency) recvAck(bet *Bet) error {
+	ackMessage := make([]byte, SIZE_ACK_MESSAGE)
+	err := a.protocol.ReceiveAll(ackMessage)
+	if err != nil {
+		return err
+	}
+	if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == ACK_OK { 
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
+			bet.clientDNI,
+			bet.number,
+		)
+	}
+	return nil
+}
+```
+
+
+El metodo `SendAll` envia los datos en el mismo orden, evitando el short write. Chequea que los bytes enviados sean la misma cantidad que los bytes a enviar y en caso contrario intenta enviar los bytes restantes. 
+
+Dicha función es utilizada para enviar la apuesta al servidor:
+```go
+func (a *Agency) sendBet(bet *Bet) error {
+	serializedBet := bet.Serialize()
+	err := a.protocol.SendAll(serializedBet)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+```
+
+#### **Servidor**:
+Se creo la clase protocol.py en el servidor para manejar la comunicación con el cliente:
+```python 
+  def __init__(self, agencySocket: socket):
+    self._agency_socket = agencySocket
+```
+
+La misma se encarga de enviar y recibir mensajes evitando los fenomenos de short read y short write de la misma manera que en el cliente.
+
+El metodo `receive_all` es utilizado para recibir la apuesta del cliente:
+```python
+  def receive_menssage(self):
+    """
+    Receives a message from the agency socket
+    
+    Returns a Bet object in case of success when the message type is
+    MESSAGE_TYPE_BET. Otherwise, it returns None.
+    """
+    message_type = self._agency_socket.recv(MESSAGE_TYPE_SIZE)
+    data = self.__receive_all()
+    
+    if message_type and message_type[0] == MESSAGE_TYPE_BET:
+      return Bet.deserialize(data)
+    else:
+      pass
+```
+
+Una vez el servidor recibe la apuesta, la almacena mediante la funcion `store_bet(...)` y luego envia una confirmacion al cliente:
+```python
+  def send_ack(self):
+    """
+    Sends an ACK message to the agency socket
+    """
+    ack_message = bytearray()
+    ack_message.append(ACK_MESSAGE_TYPE)
+    ack_message.extend((0).to_bytes(LENGTH_SIZE, byteorder='big'))
+    ack_message.extend((ACK_OK).to_bytes(ACK_SIZE, byteorder='big'))
+    
+    self.__send_all(ack_message)
+```
+
+Finalmente, se cierra la conexion con el cliente.
+
+
+
 
 ### Ejercicio N°6:
 Modificar los clientes para que envíen varias apuestas a la vez (modalidad conocida como procesamiento por _chunks_ o _batchs_). 
@@ -147,6 +347,47 @@ La cantidad máxima de apuestas dentro de cada _batch_ debe ser configurable des
 
 Por su parte, el servidor deberá responder con éxito solamente si todas las apuestas del _batch_ fueron procesadas correctamente.
 
+#### Solución:
+
+**Agencia (Cliente)**:
+
+Se modificó para que envíe las apuestas en lotes (_chunks_) según la configuración establecida en `config.yaml` bajo la clave `batch: maxAmount`. La cantidad máxima de apuestas por lote se ajustó para no exceder los 8kB. El clienta intenta conectarse al servidor y enviar los lotes de apuestas. 
+- En caso de error de conexión, el cliente reintenta la conexión hasta 3 veces antes de abortar. Esto lo hace con la función `tryConnection()`.
+- Si logra conectarse exitosamente, realiza el envio de los lotes de apuestas. Lee la maxima cantidad que puede enviar por lote respetando el limite de 8kB y envia el chunk. Espera la respuesta del servidor (ack) antes de enviar el siguiente chunk. Una vez enviado el ultimo chunk, envia un mensaje MESSAGE_TYPE_END_OF_CHUNKS para indicar que no hay mas chunks a enviar. Una vez enviado el ultimo chunk, cierra la conexion.
+
+Para la lectura del archivo de apuestas, se creo la siguiente estructura:
+```go
+type BetReader struct {
+	batchMaxAmount 	int
+	file 						*os.File
+	fileReader    	*csv.Reader
+	allBetsRead  		bool
+	unsentBet 			*Bet
+
+}
+```
+La misma se encarga de leer el archivo de apuestas mediante la funcion 
+```
+func (br *BetReader) getChunk(agencyId string) []byte {}
+``` 
+y devolver el chunk de apuestas serializado en bytes. La funcion lee las apuestas del archivo hasta completar la cantidad maxima de apuestas por lote o hasta que se terminen las apuestas del archivo. En caso de que la apuesta se leyó pero no se pudo agregar al chunk porque se superaba el limite de 8kB, la apuesta se guarda en la variable `unsentBet` para ser enviada en el siguiente lote.
+
+Por cada `chunk` de apuestas, el cliente espera la confirmacion del servidor (ACK) antes de enviar el siguiente chunk. Se agrego la funcionalidad al metodo `recvAck` para que chequee el mensaje de error `PROCESS_CHUNK_ERROR` en caso de que alguna apuesta del lote haya fallado. En caso de recibir este mensaje, el cliente loguea el error y cierra la conexion.
+
+**Servidor**:
+
+Desde el lado del servidor, se implementó la funcionalidad para recibir y procesar múltiples apuestas en un solo lote. El servidor sabe responder correctamente a los mensajes de tipo `MESSAGE_TYPE_BATCH` y `MESSAGE_TYPE_LAST_CHUNK`. Los procesa de la siguiente manera:
+- Cuando recibe un mensaje de tipo `MESSAGE_TYPE_BATCH`, procesa todas las apuestas del chunk, guardandolas con la funcion `store_bet`. 
+  
+  --> Si todas las apuestas son procesadas correctamente, le envia al cliente el mensaje `ACK_OK` y sigue esperando mas mensajes del cliente.
+  
+  --> Si alguna apuesta falla, le envia al cliente el mensaje `PROCESS_CHUNK_ERROR`, loguea el error y cierra la conexion del cliente. Esto se decidio para evitar que el cliente siga enviando mas chunks si ya hubo un error en el procesamiento de sus apuestas es porque no las envio correctamente.
+
+- Cuando recibe un mensaje de tipo `MESSAGE_TYPE_LAST_CHUNK`, significa que ya recibió todos los chunks del cliente. Por lo que loguea eun mensaje indicando que el cliente ya envio todos sus chunks, cierra la conexion y sigue esperando nuevos clientes.
+
+El servidor responde con éxito solamente si todas las apuestas del lote fueron procesadas correctamente. En caso de detectar un error con alguna de las apuestas, responde con un código de error y cierra la conexión del cliente.
+
+
 ### Ejercicio N°7:
 
 Modificar los clientes para que notifiquen al servidor al finalizar con el envío de todas las apuestas y así proceder con el sorteo.
@@ -160,12 +401,100 @@ Las funciones `load_bets(...)` y `has_won(...)` son provistas por la cátedra y 
 
 No es correcto realizar un broadcast de todos los ganadores hacia todas las agencias, se espera que se informen los DNIs ganadores que correspondan a cada una de ellas.
 
-## Parte 3: Repaso de Concurrencia
-En este ejercicio es importante considerar los mecanismos de sincronización a utilizar para el correcto funcionamiento de la persistencia.
+#### Solución:
+
+Se mantuvo la estructura de comunicación entre el servidor y las agencias (clientes) igual que en el ejercicio anterior.
+
+**Agencia (Cliente)**:
+
+Se crea la estructura `LotteryWinners` en el archivo `lotteryWinners.go` para representar la lista de ganadores que va a recibir el cliente. En la misma se encuentra el metodos para deserializar la lista de ganadores y obtener la cantidad de ganadores.
+```go
+type LotteryWinners struct {
+	Winners []string
+}
+```
+
+Una vez que el cliente finaliza el envío de todos los chunks de apuestas queda a la espera de recibir la lista de ganadores del servidor. Para esto, se implementa el método `getLotteryResult` en la clase `Agency` que recibe el mensaje del servidor y deserializa la lista de ganadores para luego imprimir por log la cantidad de ganadores.
+```go
+func (a *Agency) getLotteryResult() {
+
+	lotteryMessage := a.protocol.ReceiveAll()
+	if lotteryMessage == nil {
+		log.Criticalf("action: recv_lottery | result: fail | agency_id: %v",
+			a.config.ID)
+		a.CloseConnection()
+		return
+	}
+
+	if len(lotteryMessage) > 0 && lotteryMessage[0] == MESSAGE_TYPE_LOTTERY_RESULT { 
+		lotteryWinners := NewLotteryWinners()
+		lotteryWinners.Deserialize(lotteryMessage[3:])
+		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", lotteryWinners.GetWinnersAmount())
+	}
+}
+```
+
+**Servidor**
+
+Se agrega la variable de entorno `CLIENTS_AMOUNT` en el archivo `docker-compose-dev.yaml` para que el servidor sepa cuantas agencias (clientes) se van a conectar.
+```yaml
+    environment:
+      - CLIENTS_AMOUNT=5
+```
+
+Para que el servidor realice el sorteo, se agrego el campo `finised_agencies` donde el servidor aumenta su valor cada vez que una agencia le notifica que finalizó el envío de apuestas. Cuando este campo es igual a la cantidad de agencias (clients_amount) se realiza el sorteo y se envia a cada agencia la lista de ganadores correspondiente.
+
+Flujo de comunicación:
+1. El servidor recibe una nueva conexión y la handlea en la funcion `__handle_agency_connection`. 
+2. El servidor pasa a recibir todas las apuestas de la agencia en la función `__receive_bets`.
+3. Cuando la agencia finaliza el envío de apuestas, envía el mensaje al servidor MESSAGE_TYPE_END_OF_CHUNKS
+4. El servidor aumenta en 1 el campo `finised_agencies`. Una vez se termina el loop para el handleo de la agencia, se fija si todas las agencias finalizaron el envío de apuestas (finised_agencies == clients_amount). Si es así, realiza el sorteo y envía a cada agencia la lista de ganadores correspondiente.
 
 ### Ejercicio N°8:
 
 Modificar el servidor para que permita aceptar conexiones y procesar mensajes en paralelo. En caso de que el alumno implemente el servidor en Python utilizando _multithreading_,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
+
+
+#### Solución:
+
+El servidor fue modificado para que pueda manejar múltiples conexiones en paralelo.
+Para esto, se utilizó la librería `threading` de Python, que permite crear un nuevo hilo para cada conexión entrante. De esta manera, cada cliente puede ser atendido de forma independiente y simultánea. Se eligio implementar el servidor en Python utilizando _multithreading_ ya que para este caso de uso, donde las operaciones son principalmente de I/O (entrada/salida) y no de cálculo intensivo, el uso de hilos es adecuado y eficiente. Por lo que el Global Interpreter Lock (GIL) no representa una limitación significativa en este contexto.
+
+Cada vez que llega una nueva conexión, se crea un nuevo hilo que maneja la comunicación con ese cliente específico. Una vez se procesan todos los mensajes del cliente, se chequea si el se comenzo el sorteo. 
+
+- En caso de que no se haya comenzado se verifica si la cantidad de agencias finalizadas es igual a la cantidad de agencias conectadas. Si es así, se procede a iniciar el sorteo y enviar los resultados a todas las agencias. Para esto, el hilo que detecta que todas las agencias han finalizado, lanza otro hilo que se encarga de iniciar el sorteo y enviar los resultados a todas las agencias. 
+
+- En caso de que el sorteo no haya comenzado y no se hayan finalizado todas las agencias, el hilo queda esparando en `_lottery_done` a que se inicie el sorteo. Una vez se lance el evento, el hilo continúa su ejecución, envia los resultados al cliente y finaliza la conexión
+
+Una vez todos los clientes han finalizado y se han enviado los resultados, el servidor pasa a realizar el join de todos los hilos que se crearon para manejar las conexiones. Las mismas se pusean a una `Queue()`. Esto se hace mediante el timeout del socket, donde se chequea si el sorteo ya se realizó y si todos los hilos han finalizado. En caso afirmativo, el servidor procede a realizar el join de los hilos y "limpiar" los recursos utilizados. Queda a la espera de nuevas conexiones.
+
+El acceso a la función `store_bets()`se realiza a través de `with self._lock_store_bets` para que el acceso sea seguro.
+El acceso a la función `load_bets()` la realiza un unico hilo por lo que no se necesitaron mecanismos de sincronización. 
+
+**Sincronización utilizada:**
+
+* `self._state_lock`: protege **estado compartido**
+  (`_active_agencies_connections`, `_finished_agencies`, `_results_sent`, `_lottery_started`).
+* `self._lock_store_bets`: rodea `store_bets(...)` para **persistencia thread-safe** (archivo/FS).
+* `self._lottery_done` (`threading.Event`): se **setea** cuando termina el sorteo; los hilos de conexión que estaban esperando continúan y envían su respuesta.
+* `self._all_results_sent` (`threading.Event`): se **setea** cuando **todas** las agencias recibieron sus resultados; habilita el **join** y la limpieza de la ronda.
+* Contadores/flags:
+
+  * `_finished_agencies` (agencias que terminaron el envio de chunks),
+  * `_results_sent` (cantidad resultados enviados a las agencias),
+  * `_lottery_started` (evita disparar el sorteo más de una vez).
+
+**Coordinación del ciclo de vida (join + cleanup):**
+
+* El socket de escucha tiene `settimeout(0.5)`. En cada *wake-up* el hilo principal verifica si `_all_results_sent` está **set**:
+
+  * Si sí → llama a `__join_and_reset()`: hace **join** de todos los hilos de la ronda (guardados en una `Queue`) y **resetea** contadores, eventos y cache de ganadores.
+  * Si no → continúa aceptando conexiones normalmente.
+* Esto permite un **cierre ordenado de la ronda** (sin detener el servidor) y evita hilos colgados.
+
+
+
+
 
 ## Condiciones de Entrega
 Se espera que los alumnos realicen un _fork_ del presente repositorio para el desarrollo de los ejercicios y que aprovechen el esqueleto provisto tanto (o tan poco) como consideren necesario.
