@@ -10,4 +10,6 @@ Modificar servidor y cliente para que ambos sistemas terminen de forma _graceful
 - En el cliente, se agregó un canal para escuchar la señal SIGTERM y se implementó la función `handleSigtermSignal` para cerrar la conexión del cliente de manera adecuada. 
 - En el servidor, se agregó un manejador de señales para SIGTERM que cierra todas las conexiones activas de los clientes y el socket del servidor antes de salir. Se implementó la función `__handle_sigterm_signal` para manejar esta lógica. Se guardan las conexiones activas en una lista `_active_client_connections` para poder cerrarlas todas al recibir la señal SIGTERM.
 
+Desde el lado del cliente, ante una falla de conexión, se intenta reconectar hasta 3 veces la conexión con el servidor. En caso que no se pueda establecer la conexión, se loguea un error y se cierra el cliente. 
+
 El flag `-t` en el comando `docker compose down` especifica el tiempo de espera antes de forzar la terminación de los contenedores. Esto permite que las aplicaciones dentro de los contenedores tengan tiempo para cerrar sus recursos de manera adecuada antes de ser terminadas abruptamente.
