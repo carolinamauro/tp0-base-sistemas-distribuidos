@@ -1,3 +1,4 @@
+from queue import Queue
 import socket
 import logging
 import signal
@@ -18,6 +19,10 @@ class Server:
         self._lottery_started = False
         self._winners_by_agency = {}
         
+        self._server_socket.settimeout(0.5) 
+        self._threads = Queue()
+        self._results_sent = 0
+        self._all_results_sent = threading.Event()
         self._lottery_done = threading.Event()
         self._state_lock = threading.Lock()
         self._lock_store_bets = threading.Lock()
@@ -39,6 +44,11 @@ class Server:
                 agency_sock = self.__accept_new_connection()
                 t = threading.Thread(target=self.__handle_agency_connection, args=(agency_sock,))
                 t.start()
+                self._threads.put(t)
+            except socket.timeout:
+                if self._all_results_sent.is_set():
+                    self.__join_and_reset()
+                continue
             except OSError as e:
                 if self._listening:
                     logging.error(f"action: accept_connections | result: fail | error: {e}")
@@ -76,10 +86,12 @@ class Server:
             winners = self._winners_by_agency.get(protocol.agency_id, [])
             protocol.send_lottery_result(winners)
             
+            with self._state_lock:
+                self._results_sent += 1
+                if self._results_sent == self._clients_amount:
+                    self._all_results_sent.set() 
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
-            self.__close_connection(protocol)
-            
         finally:
             self.__close_connection(protocol)
       
@@ -135,7 +147,6 @@ class Server:
         Then connection created is printed and returned
         """
 
-        # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
@@ -145,7 +156,6 @@ class Server:
         logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {protocol.addr()}")
         protocol.close()
         self._active_agencies_connections = [t for t in self._active_agencies_connections if t.agency_id != protocol.agency_id]
-        self._finished_agencies -= 1
     
     def __handle_sigterm_signal(self, signum, frame):
         self._listening = False
@@ -157,4 +167,19 @@ class Server:
         self._server_socket.close()            
         logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
 
-        
+    def __join_and_reset(self):
+        while self._threads.qsize() > 0:
+            thread = self._threads.get()
+            thread.join()
+        logging.info("action: finish_threads | result: success | reason: all_clients_finished")
+
+        with self._state_lock:
+            self._finished_agencies = 0
+            self._results_sent = 0
+            self._lottery_started = False
+            self._winners_by_agency = {}
+            self._lottery_done.clear()
+            self._all_results_sent.clear()
+
+        logging.info("action: round_cleanup | result: success")
+
