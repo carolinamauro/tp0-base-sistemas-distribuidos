@@ -105,8 +105,10 @@ func (a *Agency) CloseConnection() {
 	}
 }
 
-// recvAck receives the ACK message from the server
-// and logs the result
+// recvAck receives the ACK message from the server:
+// 		* ACK_OK if the chunk was processed successfully
+// 		* PROCESS_CHUNK_ERROR if there was an error processing the chunk
+// Returns the ackMessage or nil in case of failure.
 func (a *Agency) recvAck() []byte {
 	ackMessage := a.protocol.ReceiveAll()
 	if ackMessage == nil {
@@ -117,6 +119,12 @@ func (a *Agency) recvAck() []byte {
 				a.config.ID, 
 		)
 	}
+	if len(ackMessage) > 0 && ackMessage[0] == MESSAGE_TYPE_ACK && ackMessage[3] == PROCESS_CHUNK_ERROR {
+		log.Errorf("action: apuesta_enviada | result: fail | agency_id: %v | error: process_chunk_error",
+				a.config.ID, 
+		)
+	}
+	
 	return ackMessage
 }
 

@@ -9,6 +9,7 @@ MESSAGE_TYPE_CHUNK = 2
 MESSAGE_TYPE_END_OF_CHUNKS = 3
 MESSAGE_TYPE_ACK = 0xFF
 ACK_OK = 0x00
+PROCESS_CHUNK_ERROR = 0x01
 
 class Protocol:
   def __init__(self, agencySocket: socket):
@@ -125,3 +126,9 @@ class Protocol:
     Returns True if both sockets are the same, False otherwise
     """
     return self._agency_socket == protocol._agency_socket
+  
+  def send_process_chunk_error(self):
+    """
+    Sends a process chunk error message to the agency socket
+    """
+    self.send_message(MESSAGE_TYPE_ACK, PROCESS_CHUNK_ERROR.to_bytes(1, byteorder='big'))

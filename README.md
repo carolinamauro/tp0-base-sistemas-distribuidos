@@ -19,8 +19,16 @@ La cantidad máxima de apuestas dentro de cada _batch_ debe ser configurable des
 Por su parte, el servidor deberá responder con éxito solamente si todas las apuestas del _batch_ fueron procesadas correctamente.
 
 #### Solución
-- Se modificó el cliente para que envíe las apuestas en lotes (_batches_) según la configuración establecida en `config.yaml` bajo la clave `batch: maxAmount`. La cantidad máxima de apuestas por lote se ajustó para no exceder los 8kB. 
-- Se agregó la funcionalidad en el servidor para procesar múltiples apuestas recibidas en un solo lote.
-- Se implementó la lógica para validar todas las apuestas en el lote y responder con éxito
 
-Se sumaron los mensajes MESSAGE_TYPE_BATCH y MESSAGE_TYPE_LAST_CHUNK. EL servidor recibe el batch y procesa todas las apuestas. EN caso de exito, responde con un ACK. EN caso de error, logea el error. Cuando el cliente envia el ultimo batch, envia el mensaje MESSAGE_TYPE_LAST_CHUNK y el servidor responde con un ACK y cierra la conexion.
+Se modificó el cliente para que envíe las apuestas en lotes (_chunks_) según la configuración establecida en `config.yaml` bajo la clave `batch: maxAmount`. La cantidad máxima de apuestas por lote se ajustó para no exceder los 8kB. El clienta intenta conectarse al servidor y enviar los lotes de apuestas. 
+- En caso de error de conexión, el cliente reintenta la conexión hasta 3 veces antes de abortar. 
+- Si logra conectarse exitosamente, realiza el envio de los lotes de apuestas. Lee la maxima cantidad que puede enviar por lote respetando el limite de 8kB y envia el chunk. Espera la respuesta del servidor (ack) antes de enviar el siguiente chunk. Una vez enviado el ultimo chunk, envia un mensaje MESSAGE_TYPE_END_OF_CHUNKS para indicar que no hay mas chunks a enviar. Una vez enviado el ultimo chunk, cierra la conexion.
+
+Desde el laso del servidor, se implementó la funcionalidad para recibir y procesar múltiples apuestas en un solo lote. El servidor sabe responder correctamente a los mensajes de tipo `MESSAGE_TYPE_BATCH` y `MESSAGE_TYPE_LAST_CHUNK`. Los procesa de la siguiente manera:
+- Cuando recibe un mensaje de tipo `MESSAGE_TYPE_BATCH`, procesa todas las apuestas del chunk, guardandolas con la funcion `store_bet`. 
+  --> Si todas las apuestas son procesadas correctamente, le envia al cliente el mensaje `ACK_OK` y sigue esperando mas mensajes del cliente.
+  --> Si alguna apuesta falla, le envia al cliente el mensaje `PROCESS_CHUNK_ERROR`, loguea el error y cierra la conexion del cliente. Esto se decidio para evitar que el cliente siga enviando mas chunks si ya hubo un error en el procesamiento de sus apuestas es porque no las envio correctamente.
+
+- Cuando recibe un mensaje de tipo `MESSAGE_TYPE_LAST_CHUNK`, significa que ya recibió todos los chunks del cliente. Por lo que loguea eun mensaje indicando que el cliente ya envio todos sus chunks, cierra la conexion y sigue esperando nuevos clientes.
+
+El servidor responde con éxito solamente si todas las apuestas del lote fueron procesadas correctamente. En caso de detectar un error con alguna de las apuestas, responde con un código de error y cierra la conexión del cliente.
