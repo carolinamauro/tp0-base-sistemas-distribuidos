@@ -1,15 +1,18 @@
 package common
 
+// LotteryWinners struct that holds the list of lottery winners
 type LotteryWinners struct {
 	Winners []string
 }
 
+// NewLotteryWinners Initializes a new LotteryWinners instance
 func NewLotteryWinners() *LotteryWinners {
 	return &LotteryWinners{
 		Winners: make([]string, 0),
 	}
 }
 
+// Deserialize populates the LotteryWinners struct from the given byte slice
 func (lw *LotteryWinners) Deserialize(data []byte) {
 	
 	for len(data) > 0 {
@@ -23,6 +26,7 @@ func (lw *LotteryWinners) Deserialize(data []byte) {
 	}
 }
 
+// GetWinnersAmount returns the number of winners in the LotteryWinners struct
 func (lw *LotteryWinners) GetWinnersAmount() int {
 	return len(lw.Winners)
 }
