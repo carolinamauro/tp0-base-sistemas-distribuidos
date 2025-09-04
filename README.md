@@ -6,3 +6,7 @@ En este ejercicio es importante considerar los mecanismos de sincronización a u
 ### Ejercicio N°8:
 
 Modificar el servidor para que permita aceptar conexiones y procesar mensajes en paralelo. En caso de que el alumno implemente el servidor en Python utilizando _multithreading_,  deberán tenerse en cuenta las [limitaciones propias del lenguaje](https://wiki.python.org/moin/GlobalInterpreterLock).
+
+
+- Voy a tener un hilo principal que va a estar escuchando conexiones y por cada conexión que reciba, voy a crear un nuevo hilo que se encargue de atender esa conexión. 
+- Va a existir una cola de mensajes compartida entre todos los hilos que atienden conexiones y cada hilo va a sacar mensajes de esa cola para procesarlos. 

@@ -3,6 +3,7 @@ import logging
 import signal
 from common.protocol import Protocol
 from common.utils import store_bets, load_bets, has_won
+import threading
 
 class Server:
     def __init__(self, port, listen_backlog, clients_amount):
@@ -14,6 +15,13 @@ class Server:
         self._clients_amount = clients_amount
         self._finished_agencies = 0
         self._listening = True
+        self._lottery_started = False
+        self._winners_by_agency = {}
+        
+        self._lottery_done = threading.Event()
+        self._state_lock = threading.Lock()
+        self._lock_store_bets = threading.Lock()
+        
 
     def run(self):
         """
@@ -24,22 +32,25 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
+        
         while self._listening:
             try:
                 agency_sock = self.__accept_new_connection()
-                protocol = Protocol(agency_sock)
-                self.__handle_agency_connection(protocol)
+                t = threading.Thread(target=self.__handle_agency_connection, args=(agency_sock,))
+                t.start()
             except OSError as e:
                 if self._listening:
                     logging.error(f"action: accept_connections | result: fail | error: {e}")
                 else:
                     logging.info("action: server_shutdown | result: in_progress")
-                break           
+                break   
+        
+        self._listening = False
+        self._server_socket.close()
+        logging.info("action: server_shutdown | result: success")        
 
-    def __handle_agency_connection(self, protocol):
+    def __handle_agency_connection(self, agency_sock):
         """
         Read message from a specific agency socket and closes the socket
 
@@ -47,17 +58,26 @@ class Server:
         agency socket will also be closed
         """
         
+        protocol = Protocol(agency_sock)
         self._active_agencies_connections.append(protocol)
         try:
             self.__recv_bets(protocol)
-            self._finished_agencies += 1
-           
-            if self._finished_agencies != self._clients_amount:
-                return
+            with self._state_lock:
+                should_start_lottery = True
+                self._finished_agencies += 1
+                if self._finished_agencies == self._clients_amount and not self._lottery_started:
+                    self._lottery_started = True
+                if should_start_lottery:
+                    threading.Thread(target=self.__run_lottery, daemon=True).start()
+            self._lottery_done.wait()
+            winners = self._winners_by_agency.get(protocol.agency_id, [])
+            protocol.send_lottery_result(winners)
             
-            self._send_lottery_result_to_agencies()
         except OSError as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
+            self.__close_connection(protocol)
+            
+        finally:
             self.__close_connection(protocol)
       
     def __recv_bets(self, protocol):
@@ -71,8 +91,8 @@ class Server:
                 except Exception as e:
                     logging.info(f"action: apuesta_recibida | result: fail | cantidad: {len(bets)}")
                     raise OSError(f"receive_chunk: {e}")
-
-                store_bets(bets)
+                with self._lock_store_bets:
+                    store_bets(bets)
                 logging.info(f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
                 try:
                     protocol.send_ack()
@@ -87,10 +107,11 @@ class Server:
                 logging.info("action: receive_agency_id | result: success")
             else:
                 raise OSError(f"invalid message type: {mtype}")
-    
-    def _send_lottery_result_to_agencies(self):
+            
+    def __run_lottery(self):
         logging.info("action: sorteo | result: success")
         winners_by_agency = {}
+        
         winners = [bet for bet in load_bets() if has_won(bet)]
         
         for bet in winners:
@@ -98,15 +119,11 @@ class Server:
                 winners_by_agency[bet.agency] = []
             winners_by_agency[bet.agency].append(bet)
         
-        for protocol in self._active_agencies_connections:
-            try:
-                protocol.send_lottery_result(winners_by_agency.get(protocol.agency_id, []))
-                logging.info(f"action: send_lottery_result | result: success | agency socket: {protocol.addr()}")
-            except Exception as e:
-                logging.error(f"action: send_lottery_result | result: fail | agency socket: {protocol.addr()} | error: {e}")
-            finally:
-                self.__close_connection(protocol)
-
+        with self._state_lock:
+            self._winners_by_agency = winners_by_agency
+        
+        logging.info("action: sorteo | result: success")
+        self._lottery_done.set()
               
     def __accept_new_connection(self):
         """
