@@ -66,6 +66,7 @@ func (br *BetReader) getChunk(agencyId string) []byte {
 	return chunk
 }
 
+// Close closes the BetReader's file
 func (br *BetReader) Close() {
 	if br.file == nil {
 		return

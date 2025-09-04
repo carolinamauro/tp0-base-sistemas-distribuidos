@@ -22,8 +22,6 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
         while self._listening:
             try:
@@ -35,7 +33,10 @@ class Server:
                     logging.error(f"action: accept_connections | result: fail | error: {e}")
                 else:
                     logging.info("action: server_shutdown | result: in_progress")
-                break           
+                break     
+        
+        self.__close_server_socket()
+        logging.info("action: server_shutdown | result: success")          
 
     def __handle_agency_connection(self, protocol):
         """
@@ -49,11 +50,11 @@ class Server:
         try:
             self.__recv_bets(protocol)
         except OSError as e:
-            logging.error(f"action: agency_communication | result: fail | error: {e}")
+            logging.error(f"action: agency_communication | result: fail | error: {e} | agency socket: {protocol.addr()}")
         finally:
             logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {protocol.addr()}")
             protocol.close()
-            self._active_agencies_connections = [p for p in self._active_agencies_connections if p._agency_socket != protocol._agency_socket]
+            self._active_agencies_connections = [p for p in self._active_agencies_connections if p.is_same(protocol) == False]
 
     def __recv_bets(self, protocol):
         """
@@ -102,15 +103,28 @@ class Server:
         c, addr = self._server_socket.accept()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
+
+    def __close_server_socket(self):
+        """
+        Close server socket and stops listening for new connections
+        """
+        
+        self._listening = False
+        self._server_socket.close()
     
     def __handle_sigterm_signal(self, signum, frame):
-        self._listening = False
+        """
+        Handles the SIGTERM signal to close all connections gracefully
+        1. Closes the server socket to stop accepting new connections
+        2. Closes all active client connections
+        """
+        
+        self.__close_server_socket()
         logging.info('action: SIGTERM signal received | result: in_progress')
         for protocol in self._active_agencies_connections:
             protocol.close()
-            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {protocol._agency_socket}')
+            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {protocol.addr()}')
         socket_addr = self._server_socket.getsockname()[0]
-        self._server_socket.close()            
         logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
 
         

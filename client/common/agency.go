@@ -59,13 +59,13 @@ func (a *Agency) StartAgencyLoop() {
 
   betReader := NewBetReader(a.config.BatchMaxAmount)
 
-  // Crear socket
-  if err := a.createAgencySocket(); err != nil {
-      log.Criticalf("action: create_socket | result: fail | agency_id: %v | error: %v", a.config.ID, err)
-      betReader.Close()
-      signal.Stop(signalChannel)
-      return
-  }
+	if connError := a.tryConnection(); connError != nil {
+		log.Errorf(
+		  "action: connect | result: fail | client_id: %v | error: could not establish connection after 3 attempts: %v",
+		  a.config.ID, connError,
+		)
+		return
+	}
 
   loop: for {
       select {
@@ -97,7 +97,6 @@ func (a *Agency) StartAgencyLoop() {
 		
 }
 
-
 // CloseConnection closes the Agency connection gracefully
 func (a *Agency) CloseConnection() {
 	if a.protocol != nil {
@@ -119,4 +118,28 @@ func (a *Agency) recvAck() []byte {
 		)
 	}
 	return ackMessage
+}
+
+// tryConnection Tries to connect to the server 3 times before giving up
+// and returning the last error encountered
+func (a *Agency) tryConnection() error {
+	var connError error
+	connError = nil
+	for tried := 1; tried <= 3; tried++ {
+		connError = a.createAgencySocket()
+		if connError == nil {
+		    break
+		}
+
+    log.Criticalf(
+      "action: connect | result: retrying | agency_id: %v | attempt: %d | error: %v",
+      a.config.ID, tried, connError,
+    )
+
+    if tried < 3 {
+      time.Sleep(a.config.LoopPeriod)
+    }
+	}
+
+	return connError
 }
