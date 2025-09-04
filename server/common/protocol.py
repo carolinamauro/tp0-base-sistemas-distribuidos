@@ -1,5 +1,4 @@
 import socket
-import logging
 from common.utils import Bet
 
 SIZE_SERIALIZED_MESSAGE_LENGHT = 2
