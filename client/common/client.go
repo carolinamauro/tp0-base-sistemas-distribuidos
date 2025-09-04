@@ -54,6 +54,7 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+// handleSigtermSignal Handles the SIGTERM signal to close the connection gracefully
 func (c *Client) handleSigtermSignal() {
 	log.Infof("action: SIGTERM signal received | result: in_progress | client_id: %v", c.config.ID)
 	c.running = false
@@ -68,20 +69,18 @@ func (c *Client) handleSigtermSignal() {
 func (c *Client) StartClientLoop() {
 	c.running = true
 
-	// Handle SIGTERM signal to close the connection gracefully
 	signalChannel := make(chan os.Signal, 2)
     signal.Notify(signalChannel, syscall.SIGTERM)
     go func() {
         <-signalChannel
         c.handleSigtermSignal()
-				close(signalChannel)
     }()
 
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount && c.running; msgID++ {
 	
-		if connError := c.TryConnection(); connError != nil {
+		if connError := c.tryConnection(); connError != nil {
 		  log.Errorf(
 		    "action: connect | result: fail | client_id: %v | error: could not establish connection after 3 attempts: %v",
 		    c.config.ID, connError,
@@ -119,7 +118,9 @@ func (c *Client) StartClientLoop() {
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
-func (c *Client) TryConnection() error {
+// tryConnection Tries to connect to the server 3 times before giving up
+// and returning the last error encountered
+func (c *Client) tryConnection() error {
 	var connError error
 	connError = nil
 	for tried := 1; tried <= 3; tried++ {

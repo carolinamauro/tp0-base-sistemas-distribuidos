@@ -21,8 +21,6 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
         signal.signal(signal.SIGTERM, self.__handle_sigterm_signal)
         while self._listening:
             try:
@@ -75,10 +73,20 @@ class Server:
         return c
     
     def __close_server_socket(self):
+        """
+        Close server socket and stops listening for new connections
+        """
+        
         self._listening = False
         self._server_socket.close()
     
     def __handle_sigterm_signal(self, signum, frame):
+        """
+        Handles the SIGTERM signal to close all connections gracefully
+        1. Closes the server socket to stop accepting new connections
+        2. Closes all active client connections
+        """
+        
         self.__close_server_socket()
         logging.info('action: SIGTERM signal received | result: in_progress')
         for client_socket in self._active_client_connections:
