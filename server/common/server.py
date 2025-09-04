@@ -32,9 +32,13 @@ class Server:
             except OSError as e:
                 if self._listening:
                     logging.error(f"action: accept_connections | result: fail | error: {e}")
+                    self.__close_server_socket()
                 else:
                     logging.info("action: server_shutdown | result: in_progress")
                 break
+            
+        self.__close_server_socket()
+        logging.info("action: server_shutdown | result: success")
 
     def __handle_client_connection(self, client_sock):
         """
@@ -70,14 +74,17 @@ class Server:
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
     
-    def __handle_sigterm_signal(self, signum, frame):
+    def __close_server_socket(self):
         self._listening = False
+        self._server_socket.close()
+    
+    def __handle_sigterm_signal(self, signum, frame):
+        self.__close_server_socket()
         logging.info('action: SIGTERM signal received | result: in_progress')
         for client_socket in self._active_client_connections:
             client_socket.close()
             logging.info(f'action: SIGTERM signal received | result: success | client socket: {client_socket}')
         socket_addr = self._server_socket.getsockname()[0]
-        self._server_socket.close()            
         logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
         
 

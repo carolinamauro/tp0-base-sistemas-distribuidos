@@ -48,6 +48,7 @@ func (c *Client) createClientSocket() error {
 			c.config.ID,
 			err,
 		)
+		return err
 	}
 	c.conn = conn
 	return nil
@@ -79,8 +80,14 @@ func (c *Client) StartClientLoop() {
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount && c.running; msgID++ {
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+	
+		if connError := c.TryConnection(); connError != nil {
+		  log.Errorf(
+		    "action: connect | result: fail | client_id: %v | error: could not establish connection after 3 attempts: %v",
+		    c.config.ID, connError,
+		  )
+		  return
+		}
 
 		// TODO: Modify the send to avoid short-write
 		fmt.Fprintf(
@@ -110,4 +117,26 @@ func (c *Client) StartClientLoop() {
 
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+}
+
+func (c *Client) TryConnection() error {
+	var connError error
+	connError = nil
+	for tried := 1; tried <= 3; tried++ {
+		connError = c.createClientSocket()
+		if connError == nil {
+		    break
+		}
+
+    log.Criticalf(
+      "action: connect | result: retrying | client_id: %v | attempt: %d | error: %v",
+      c.config.ID, tried, connError,
+    )
+
+    if tried < 3 {
+      time.Sleep(c.config.LoopPeriod)
+    }
+	}
+
+	return connError
 }
