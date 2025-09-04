@@ -119,12 +119,12 @@ class Server:
         2. Closes all active client connections
         """
         
+        socket_addr = self._server_socket.getsockname()[0]
+        logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
         self.__close_server_socket()
         logging.info('action: SIGTERM signal received | result: in_progress')
         for protocol in self._active_agencies_connections:
             protocol.close()
             logging.info(f'action: SIGTERM signal received | result: success | agency socket: {protocol.addr()}')
-        socket_addr = self._server_socket.getsockname()[0]
-        logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
 
         
