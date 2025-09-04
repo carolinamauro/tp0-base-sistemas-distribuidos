@@ -56,9 +56,8 @@ class Server:
                     logging.info("action: server_shutdown | result: in_progress")
                 break   
         
-        self._listening = False
-        self._server_socket.close()
-        logging.info("action: server_shutdown | result: success")        
+        self.__close_server_socket()
+        logging.info("action: server_shutdown | result: success")    
 
     def __handle_agency_connection(self, agency_sock):
         """
@@ -80,7 +79,9 @@ class Server:
                     self._lottery_started = True
                     should_start_lottery = True
                 if should_start_lottery:
-                    threading.Thread(target=self.__run_lottery, daemon=True).start()
+                    t = threading.Thread(target=self.__run_lottery, args=())
+                    t.start()
+                    self._threads.put(t)
             
             self._lottery_done.wait()
             winners = self._winners_by_agency.get(protocol.agency_id, [])
@@ -96,6 +97,13 @@ class Server:
             self.__close_connection(protocol)
       
     def __recv_bets(self, protocol):
+        """
+        Receive bets from a specific agency socket
+
+        Function blocks until the agency sends all the bets or an error
+        arises. In case of success, the bets received are returned.
+        Otherwise, an exception is raised
+        """
         while True:
             mtype = protocol.receive_message_type()
             if mtype is None:
@@ -104,7 +112,8 @@ class Server:
                 try:
                     bets = protocol.receive_chunk()
                 except Exception as e:
-                    logging.info(f"action: apuesta_recibida | result: fail | cantidad: {len(bets)}")
+                    protocol.send_process_chunk_error()
+                    logging.info(f"action: apuesta_recibida | result: fail")
                     raise OSError(f"receive_chunk: {e}")
                 with self._lock_store_bets:
                     store_bets(bets)
@@ -124,6 +133,9 @@ class Server:
                 raise OSError(f"invalid message type: {mtype}")
             
     def __run_lottery(self):
+        """
+        Runs the lottery and stores the winners by agency
+        """
         winners_by_agency = {}
         
         winners = [bet for bet in load_bets() if has_won(bet)]
@@ -153,19 +165,33 @@ class Server:
         return c
     
     def __close_connection(self, protocol):
-        logging.info(f"action: close_agency_connection | result: in_progress | agency socket: {protocol.addr()}")
+        """
+        Close a specific agency connection and removes it from the active connections list
+        """
+        logging.info(f"action: close_agency_connection | result: success | agency socket: {protocol.addr()}")
+        self._active_agencies_connections = [p for p in self._active_agencies_connections if not p.is_same(protocol)]
         protocol.close()
-        self._active_agencies_connections = [t for t in self._active_agencies_connections if t.agency_id != protocol.agency_id]
+        
+    def __close_server_socket(self):
+        """
+        Close server socket and stops listening for new connections
+        """
+        
+        self._listening = False
+        self._server_socket.close()
     
     def __handle_sigterm_signal(self, signum, frame):
-        self._listening = False
-        logging.info('action: SIGTERM signal received | result: in_progress')
+        """
+        Handles the SIGTERM signal to close all connections gracefully
+        1. Closes the server socket to stop accepting new connections
+        2. Closes all active client connections
+        """
+        
+        self.__close_server_socket()
+        logging.info(f'action: SIGTERM signal received | result: success | server socket')
         for protocol in self._active_agencies_connections:
             protocol.close()
-            logging.info(f'action: SIGTERM signal received | result: success | agency socket: {protocol._agency_socket}')
-        socket_addr = self._server_socket.getsockname()[0]
-        self._server_socket.close()            
-        logging.info(f'action: SIGTERM signal received | result: success | server socket: {socket_addr}')
+            logging.info(f'action: SIGTERM signal received | result: success | agency socket')
 
     def __join_and_reset(self):
         while self._threads.qsize() > 0:

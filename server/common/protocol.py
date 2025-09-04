@@ -12,6 +12,7 @@ MESSAGE_TYPE_AGENCY_ID = 4
 MESSAGE_TYPE_LOTTERY_RESULT = 5
 MESSAGE_TYPE_ACK = 0xFF
 ACK_OK = 0x00
+PROCESS_CHUNK_ERROR = 0x01
 
 class Protocol:
   def __init__(self, agencySocket: socket):
@@ -125,6 +126,13 @@ class Protocol:
     self.__send_all(message)
     
   def send_lottery_result(self, winners: list[Bet]):
+    """
+    Sends the lottery result to the agency socket. The message is composed by:
+    - message type (1 byte)
+    - message length (2 bytes)
+    - message data (message length bytes) where message data is a sequence of
+      serialized DNI fields of the winning bets.
+    """
     message = bytearray()
     for bet in winners:
       serialized_dni = bet.serialize_dni_field()
@@ -143,4 +151,18 @@ class Protocol:
     Returns the IP address of the agency socket
     """
     return self._agency_socket.getpeername()[0]
+  
+  def is_same(self, protocol):
+    """
+    Compares the agency socket with another socket passed as parameter
+    
+    Returns True if both sockets are the same, False otherwise
+    """
+    return self._agency_socket == protocol._agency_socket
+  
+  def send_process_chunk_error(self):
+    """
+    Sends a process chunk error message to the agency socket
+    """
+    self.send_message(MESSAGE_TYPE_ACK, PROCESS_CHUNK_ERROR.to_bytes(1, byteorder='big'))
   
