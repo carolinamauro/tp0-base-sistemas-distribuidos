@@ -60,3 +60,4 @@ Por ejemplo, para enviar una apuesta del apostador "Carolina Gonzalez", con DNI 
 | `20 0A 31 39 39 30 2D 30 31 2D 30 31` | CLIENT\_BIRTHDATE (Type=20, Len=10) | `"1990-01-01"`          |
 | `15 04 00 00 03 E9`                   | BET\_NUMBER (Type=21, Len=4)        | `0x000003E9` = **1001** |
 
+Una vez que el servidor reciba la apuesta y la almacena, debera enviar una confirmacion al cliente (ack). Finalmente, cierra la conexion.

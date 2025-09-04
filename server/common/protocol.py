@@ -95,3 +95,11 @@ class Protocol:
     """
     return self._agency_socket.getpeername()[0]
   
+  def is_same(self, protocol):
+    """
+    Compares the agency socket with another socket passed as parameter
+    
+    Returns True if both sockets are the same, False otherwise
+    """
+    return self._agency_socket == protocol._agency_socket
+  

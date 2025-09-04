@@ -65,7 +65,6 @@ func (a *Agency) StartAgencyLoop() {
     go func() {
         <-signalChannel
         a.handleSigtermSignal()
-				close(signalChannel)
     }()
 
 	bet := getBetFromEnvironment()
@@ -74,7 +73,13 @@ func (a *Agency) StartAgencyLoop() {
 		return
 	}
 
-	a.createAgencySocket()
+	if connError := c.tryConnection(); connError != nil {
+		log.Errorf(
+		  "action: connect | result: fail | client_id: %v | error: could not establish connection after 3 attempts: %v",
+		  c.config.ID, connError,
+		)
+		return
+	}
 
 	if err := a.sendBet(bet); err != nil {
 		log.Criticalf("action: send_bet | result: fail | agency_id: %v | error: %v",
@@ -144,17 +149,41 @@ func getBetFromEnvironment() *Bet {
 	if err != nil {
 		log.Criticalf("action: convert_agency_id | result: fail | agency_id: %v | error: %v",
 			agencyId, err)
-			return nil
+		return nil
 	}
 
 	clientBetNumberUint64, err := strconv.ParseUint(clientBetNumber, 10, 32)
 	if err != nil {
 		log.Criticalf("action: convert_bet_number | result: fail | bet_number: %v | error: %v",
 			clientBetNumber, err)
-			return nil
+		return nil
 	}
 
 
 	bet := NewBet(uint16(agencyIdUint64), uint16(clientBetNumberUint64), clientName, clientSurname, clientDNI, clientBirthDate)
 	return bet
+}
+
+// tryConnection Tries to connect to the server 3 times before giving up
+// and returning the last error encountered
+func (c *Client) tryConnection() error {
+	var connError error
+	connError = nil
+	for tried := 1; tried <= 3; tried++ {
+		connError = c.createClientSocket()
+		if connError == nil {
+		    break
+		}
+
+    log.Criticalf(
+      "action: connect | result: retrying | client_id: %v | attempt: %d | error: %v",
+      c.config.ID, tried, connError,
+    )
+
+    if tried < 3 {
+      time.Sleep(c.config.LoopPeriod)
+    }
+	}
+
+	return connError
 }
