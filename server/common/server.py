@@ -62,13 +62,16 @@ class Server:
         self._active_agencies_connections.append(protocol)
         try:
             self.__recv_bets(protocol)
+            logging.info(f"action: all_bets_received | result: success | agency_id: {protocol.agency_id}")
             with self._state_lock:
-                should_start_lottery = True
+                should_start_lottery = False
                 self._finished_agencies += 1
                 if self._finished_agencies == self._clients_amount and not self._lottery_started:
                     self._lottery_started = True
+                    should_start_lottery = True
                 if should_start_lottery:
                     threading.Thread(target=self.__run_lottery, daemon=True).start()
+            
             self._lottery_done.wait()
             winners = self._winners_by_agency.get(protocol.agency_id, [])
             protocol.send_lottery_result(winners)
@@ -109,7 +112,6 @@ class Server:
                 raise OSError(f"invalid message type: {mtype}")
             
     def __run_lottery(self):
-        logging.info("action: sorteo | result: success")
         winners_by_agency = {}
         
         winners = [bet for bet in load_bets() if has_won(bet)]
